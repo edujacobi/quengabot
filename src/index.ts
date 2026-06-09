@@ -5,7 +5,8 @@ import ffmpeg from "ffmpeg-static";
 if (ffmpeg) {
 	process.env.FFMPEG_PATH = ffmpeg;
 	console.log(`[Bot] Found ffmpeg-static. Set FFMPEG_PATH to: ${ffmpeg}`);
-} else {
+}
+else {
 	console.warn("[Bot] ffmpeg-static was not found. Make sure ffmpeg is installed globally in your system.");
 }
 
