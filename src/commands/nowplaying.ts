@@ -4,7 +4,7 @@ import {
 } from "discord.js";
 import { getPlayer } from "../music/player.js";
 import { type Command } from "../types.js";
-import { CustomContainerBuilder, CustomSectionBuilder, SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
+import { CustomContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { replyWithContainer } from "../utils/discordInteractions.js";
 import { EmoteString } from "../utils/emotes.js";
 import { ImageUrls } from "../utils/imageUrls.js";
@@ -18,30 +18,35 @@ export const nowplayingCommand: Command = {
 		const player = getPlayer(interaction.guildId!);
 		const current = player.GetCurrentTrack();
 
+		const container = new CustomContainerBuilder();
+
 		if (!current) {
-			const container = new SimpleContainerBuilder(
+			container.addTexts([
 				`${EmoteString.Info} **Nothing is currently playing.**`
-			);
+			]);
 
 			await replyWithContainer(interaction, container);
 			return;
 		}
 
-		const section = new CustomSectionBuilder()
+		container
 			.addTexts([
-				`### ${EmoteString.NowPlaying} Now Playing`,
-				`**Title:** ${current.title}`,
-				`**Artist:** ${current.artist}`,
-				`**Duration:** ${current.durationString}`,
-				`**Source:** ${current.source.replace("_", " ").toUpperCase()}`,
-				`**Requested By:** <@${current.requestedBy}>`
+				`### ${EmoteString.NowPlaying} Now Playing`
 			])
-			.setThumbnailAccessory(thumb => thumb
-				.setURL(current.thumbnailUrl || ImageUrls.NoThumbnail)
-			);
-
-		const container = new CustomContainerBuilder()
-			.addSectionComponents(section);
+			.addLargeSeparator()
+			.addSectionComponents(section => section
+				.addTexts([
+					`## [${current.title}](${current.url})`,
+					`${current.artist}`,
+					`-# \`${current.durationString}\``,
+				])
+				.setThumbnailAccessory(thumb => thumb
+					.setURL(current.thumbnailUrl || ImageUrls.NoThumbnail)
+				)
+			)
+			.addFooter({
+				text: `Requested by: <@${current.requestedBy}>`,
+			});
 
 		await replyWithContainer(interaction, container);
 	}

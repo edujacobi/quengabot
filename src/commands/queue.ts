@@ -5,10 +5,9 @@ import {
 import { getPlayer } from "../music/player.js";
 import { formatDuration } from "../music/resolver.js";
 import { type Command } from "../types.js";
-import { CustomContainerBuilder, CustomSectionBuilder, SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
+import { CustomContainerBuilder, SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { replyWithContainer } from "../utils/discordInteractions.js";
 import { EmoteString } from "../utils/emotes.js";
-import { ImageUrls } from "../utils/imageUrls.js";
 
 export const queueCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -27,46 +26,60 @@ export const queueCommand: Command = {
 			return;
 		}
 
-		const container = new CustomContainerBuilder();
+		const container = new CustomContainerBuilder()
+			.addTexts([
+				`### ${EmoteString.Queue} Music Queue`
+			])
+			.addLargeSeparator();
 
 		// 1. Add currently playing section (with thumbnail)
 		if (current) {
-			const currentSection = new CustomSectionBuilder()
+			container
 				.addTexts([
-					`### ${EmoteString.NowPlaying} Currently Playing:`,
-					`**${current.title}** by *${current.artist}* (${current.durationString})`,
-					`Requested by: <@${current.requestedBy}>`
+					`> -# ${EmoteString.NowPlaying} **Now Playing**`,
+					`> ### [${current.title}](${current.url})`,
+					`> ${current.artist}`,
+					`> -# \`${current.durationString}\``
 				])
-				.setThumbnailAccessory(thumb => thumb
-					.setURL(current.thumbnailUrl || ImageUrls.NoThumbnail)
-				);
-
-			container.addSectionComponents(currentSection);
+				.addLargeSeparator();
 		}
 
 		// 2. Add upcoming queue list section
 		const totalDurationSec = queue.reduce((acc, t) => acc + t.duration, 0) + (current ? current.duration : 0);
 		const totalDurationStr = formatDuration(totalDurationSec);
 
-		let upcomingContent = `${EmoteString.Queue} **Upcoming Tracks:**\n`;
 		if (queue.length === 0) {
-			upcomingContent += "\n*No upcoming tracks in the queue.*";
+			container.addTexts(["*No upcoming tracks in the queue.*"]);
 		}
 		else {
-			const queueList = queue
-				.map((track, i) => `${i + 1}. **${track.title.substring(0, 70)}** - *${track.artist.substring(0, 40)}* (${track.durationString}) [Requested by: <@${track.requestedBy}>]`)
-				.slice(0, 10)
-				.join("\n");
-			upcomingContent += `\n${queueList}`;
+			const PAGE_LIMIT = Math.min(15, queue.length);
 
-			if (queue.length > 10) {
-				upcomingContent += `\n\n*... and ${queue.length - 10} more tracks*`;
+			for (let i = 0; i < PAGE_LIMIT; i++) {
+				const track = queue[i];
+				container
+					.addTexts([
+						`\`${i + 1}.\` **[${track.title}](${track.url})** by ${track.artist} \`${track.durationString}\``,
+					]);
+
+				const shouldSeparate = i < PAGE_LIMIT - 1 && i < queue.length - 1;
+
+				if (shouldSeparate) {
+					container.addSmallSeparator();
+				}
+			}
+
+			if (queue.length > PAGE_LIMIT) {
+				container
+					.addSmallSeparator()
+					.addTexts([`and ${queue.length - PAGE_LIMIT} more tracks`]);
 			}
 		}
 
-		upcomingContent += `\n\n**Total Tracks:** ${queue.length + (current ? 1 : 0)} | **Total Queue Duration:** ${totalDurationStr}`;
-
-		container.addTexts([upcomingContent]);
+		container
+			.addLargeSeparator()
+			.addTexts([
+				`-# **Total Tracks:** ${queue.length + (current ? 1 : 0)} | **Total Queue Duration:** ${totalDurationStr}`
+			]);
 
 		await replyWithContainer(interaction, container);
 	}
