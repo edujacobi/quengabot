@@ -171,11 +171,11 @@ export class GuildPlayer {
 
 			this.Current = nextTrack;
 
-			this.SendInChannel(`${EmoteString.NowPlaying} **Now playing:** **${nextTrack.title}** by *${nextTrack.artist}* (Requested by: <@${nextTrack.requestedBy}>)`);
-
 			// Lazy resolve the audio stream
 			const { stream, type } = await getAudioStream(nextTrack);
 			const resource = createAudioResource(stream, { inputType: type as StreamType });
+
+			this.SendInChannel(`${EmoteString.NowPlaying} **Now playing:** **[${nextTrack.title}](${nextTrack.url})** by ${nextTrack.artist}\n-# requested by <@${nextTrack.requestedBy}>`);
 
 			this.Player.play(resource);
 		}
