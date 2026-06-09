@@ -1,34 +1,42 @@
-import {
-	type ChatInputCommandInteraction,
-	SlashCommandBuilder
-} from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import { type Command } from "../types.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
-import { checkVoiceState, replyWithContainer } from "../utils/discordInteractions.js";
 import { EmoteString } from "../utils/emotes.js";
+import { CommandContext } from "../utils/commandContext.js";
 
 export const leaveCommand: Command = {
 	data: new SlashCommandBuilder()
 		.setName("leave")
 		.setDescription("Stop playback and leave the voice channel"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!await checkVoiceState(interaction, true)) return;
+	aliases: ["l", "stop"],
 
-		const queue = interaction.client.distube.getQueue(interaction.guildId!);
+	async execute(interaction) {
+		await handleLeave(new CommandContext(interaction));
+	},
 
-		if (!queue) {
-			const container = new SimpleContainerBuilder(`${EmoteString.Info} **I am not in a voice channel.**`);
-			await replyWithContainer(interaction, container);
-			return;
-		}
-
-		await queue.stop();
-
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.Heart} **Left the voice channel and cleared the queue.**`
-		);
-		await replyWithContainer(interaction, container);
+	async executePrefix(message) {
+		await handleLeave(new CommandContext(message));
 	}
 };
+
+async function handleLeave(ctx: CommandContext) {
+	if (!await ctx.checkVoice(true)) return;
+
+	const queue = ctx.client.distube.getQueue(ctx.guildId);
+
+	if (!queue) {
+		const container = new SimpleContainerBuilder(`${EmoteString.Info} **I am not in a voice channel.**`);
+		await ctx.reply(container);
+		return;
+	}
+
+	await queue.stop();
+
+	const container = new SimpleContainerBuilder(
+		`${EmoteString.Heart} **Left the voice channel and cleared the queue.**`
+	);
+	await ctx.reply(container);
+}
+
 export default leaveCommand;

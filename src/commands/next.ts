@@ -1,32 +1,46 @@
-import {
-	type ChatInputCommandInteraction,
-	SlashCommandBuilder
-} from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import { type Command } from "../types.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
-import { checkVoiceState, replyWithContainer } from "../utils/discordInteractions.js";
 import { EmoteString } from "../utils/emotes.js";
+import { CommandContext } from "../utils/commandContext.js";
 
 export const nextCommand: Command = {
 	data: new SlashCommandBuilder()
 		.setName("next")
 		.setDescription("Skip the currently playing song"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!await checkVoiceState(interaction, true)) return;
+	aliases: ["n", "skip", "s"],
 
-		const queue = interaction.client.distube.getQueue(interaction.guildId!);
+	async execute(interaction) {
+		await handleNext(new CommandContext(interaction));
+	},
 
-		if (!queue) {
-			const container = new SimpleContainerBuilder(`${EmoteString.Info} **Nothing is currently playing.**`);
-			await replyWithContainer(interaction, container);
-			return;
-		}
-
-		await queue.skip();
-
-		const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the current track.**`);
-		await replyWithContainer(interaction, container);
+	async executePrefix(message) {
+		await handleNext(new CommandContext(message));
 	}
 };
+
+async function handleNext(ctx: CommandContext) {
+	if (!await ctx.checkVoice(true)) return;
+
+	const queue = ctx.client.distube.getQueue(ctx.guildId);
+
+	if (!queue) {
+		const container = new SimpleContainerBuilder(`${EmoteString.Info} **Nothing is currently playing.**`);
+		await ctx.reply(container);
+		return;
+	}
+
+	if (queue.songs.length <= 1) {
+		await queue.stop();
+		const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the track and ended the queue.**`);
+		await ctx.reply(container);
+	}
+	else {
+		await queue.skip();
+		const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the current track.**`);
+		await ctx.reply(container);
+	}
+}
+
 export default nextCommand;

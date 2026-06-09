@@ -1,9 +1,11 @@
-import { type Collection, type ChatInputCommandInteraction, type SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type SlashCommandSubcommandsOnlyBuilder } from "discord.js";
+import { type Collection, type ChatInputCommandInteraction, type Message, type SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type SlashCommandSubcommandsOnlyBuilder } from "discord.js";
 import type { DisTube } from "distube";
 
 export interface Command {
 	data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
 	execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+	aliases?: string[];
+	executePrefix?: (message: Message, args: string[]) => Promise<void>;
 }
 
 declare module "discord.js" {

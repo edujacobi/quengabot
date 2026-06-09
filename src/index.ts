@@ -31,12 +31,15 @@ import pauseCommand from "./commands/pause.js";
 import playCommand from "./commands/play.js";
 import queueCommand from "./commands/queue.js";
 import removeCommand from "./commands/remove.js";
+import helpCommand from "./commands/help.js";
 
 // ── Discord Client ─────────────────────────────────────────────────────────────
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildVoiceStates,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
 	]
 });
 
@@ -152,6 +155,7 @@ commands.set(leaveCommand.data.name, leaveCommand);
 commands.set(queueCommand.data.name, queueCommand);
 commands.set(nowplayingCommand.data.name, nowplayingCommand);
 commands.set(removeCommand.data.name, removeCommand);
+commands.set(helpCommand.data.name, helpCommand);
 
 client.commands = commands;
 
@@ -219,6 +223,47 @@ client.on(Events.InteractionCreate, async (interaction) => {
 				await replyWithContainer(interaction, container, true);
 			}
 		}
+	}
+});
+
+// ── Message Command Handler (Prefix "q!") ──────────────────────────────────────
+client.on(Events.MessageCreate, async (message) => {
+	// Ignore messages from bots or outside guilds
+	if (message.author.bot || !message.guild) return;
+
+	const prefix = "q!";
+	if (!message.content.startsWith(prefix)) return;
+
+	// Split message content into command and args
+	const args = message.content.slice(prefix.length).trim().split(/ +/);
+	const commandName = args.shift()?.toLowerCase();
+
+	if (!commandName) return;
+
+	// Find command by name or alias
+	const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases?.includes(commandName));
+
+	if (!command) return;
+
+	try {
+		if (command.executePrefix) {
+			await command.executePrefix(message, args);
+		}
+		else {
+			const container = new SimpleContainerBuilder(`${EmoteString.Error} This command cannot be run via prefix.`);
+			await message.reply({
+				components: [container],
+				flags: MessageFlags.IsComponentsV2,
+			});
+		}
+	}
+	catch (err: unknown) {
+		console.error(`[Prefix] Error executing command ${commandName}:`, err);
+		const container = new SimpleContainerBuilder(`${EmoteString.Error} An error occurred: ${(err as Error).message}`);
+		await message.reply({
+			components: [container],
+			flags: MessageFlags.IsComponentsV2,
+		}).catch(() => undefined);
 	}
 });
 

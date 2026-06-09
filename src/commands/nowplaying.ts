@@ -1,48 +1,56 @@
-import {
-	type ChatInputCommandInteraction,
-	SlashCommandBuilder
-} from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import { type Command } from "../types.js";
 import { CustomContainerBuilder } from "../utils/CustomContainerBuilder.js";
-import { replyWithContainer } from "../utils/discordInteractions.js";
 import { EmoteString } from "../utils/emotes.js";
 import { ImageUrls } from "../utils/imageUrls.js";
+import { CommandContext } from "../utils/commandContext.js";
 
 export const nowplayingCommand: Command = {
 	data: new SlashCommandBuilder()
 		.setName("nowplaying")
 		.setDescription("Show details of the song currently playing"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		const queue = interaction.client.distube.getQueue(interaction.guildId!);
-		const current = queue?.songs[0] ?? null;
+	aliases: ["np"],
 
-		const container = new CustomContainerBuilder();
+	async execute(interaction) {
+		await handleNowplaying(new CommandContext(interaction));
+	},
 
-		if (!current) {
-			container.addTexts([`${EmoteString.Info} **Nothing is currently playing.**`]);
-			await replyWithContainer(interaction, container);
-			return;
-		}
-
-		container
-			.addTexts([`### ${EmoteString.NowPlaying} Now Playing`])
-			.addLargeSeparator()
-			.addSectionComponents(section => section
-				.addTexts([
-					`## [${current.name}](${current.url})`,
-					`${current.uploader?.name || "Unknown"}`,
-					`-# \`${current.formattedDuration || "?"}\``,
-				])
-				.setThumbnailAccessory(thumb => thumb
-					.setURL(current.thumbnail || ImageUrls.NoThumbnail)
-				)
-			)
-			.addFooter({
-				text: `Requested by: <@${current.user?.id || "Unknown"}>`,
-			});
-
-		await replyWithContainer(interaction, container);
+	async executePrefix(message) {
+		await handleNowplaying(new CommandContext(message));
 	}
 };
+
+async function handleNowplaying(ctx: CommandContext) {
+	const queue = ctx.client.distube.getQueue(ctx.guildId);
+	const current = queue?.songs[0] ?? null;
+
+	const container = new CustomContainerBuilder();
+
+	if (!current) {
+		container.addTexts([`${EmoteString.Info} **Nothing is currently playing.**`]);
+		await ctx.reply(container);
+		return;
+	}
+
+	container
+		.addTexts([`### ${EmoteString.NowPlaying} Now Playing`])
+		.addLargeSeparator()
+		.addSectionComponents(section => section
+			.addTexts([
+				`## [${current.name}](${current.url})`,
+				`${current.uploader?.name || "Unknown"}`,
+				`-# \`${current.formattedDuration || "?"}\``,
+			])
+			.setThumbnailAccessory(thumb => thumb
+				.setURL(current.thumbnail || ImageUrls.NoThumbnail)
+			)
+		)
+		.addFooter({
+			text: `requested by <@${current.user?.id || "Unknown"}>`,
+		});
+
+	await ctx.reply(container);
+}
+
 export default nowplayingCommand;

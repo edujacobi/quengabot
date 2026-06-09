@@ -1,4 +1,4 @@
-import { ButtonInteraction, type CommandInteraction, type ContainerBuilder, type DiscordAPIError, type InteractionEditReplyOptions, type InteractionReplyOptions, MessageComponentInteraction, MessageFlags, type MessagePayload, type GuildMember } from "discord.js";
+import { ButtonInteraction, MessageComponentInteraction, MessageFlags, type CommandInteraction, type ContainerBuilder, type DiscordAPIError, type GuildMember, type InteractionEditReplyOptions, type InteractionReplyOptions, type Message, type MessagePayload } from "discord.js";
 import { SimpleContainerBuilder, type CustomContainerBuilder } from "./CustomContainerBuilder";
 import { EmoteString } from "./emotes";
 
@@ -68,7 +68,9 @@ export async function replyInteraction(interaction: CommandInteraction | ButtonI
 export async function replyWithContainer(interaction: CommandInteraction | ButtonInteraction | MessageComponentInteraction, container: CustomContainerBuilder | ContainerBuilder, ephemeral = false) {
 	return await replyInteraction(interaction, {
 		components: [container],
-		flags: ephemeral ? [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral] : MessageFlags.IsComponentsV2,
+		flags: ephemeral ?
+			[MessageFlags.IsComponentsV2, MessageFlags.Ephemeral, MessageFlags.SuppressNotifications] :
+			[MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 	});
 }
 
@@ -146,6 +148,56 @@ export async function checkVoiceState(
 	if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
 		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
 		await replyWithContainer(interaction, container, true);
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Replies to a message with a custom container (UI).
+ *
+ * @param message - The message to reply to.
+ * @param container - The container builder with components.
+ * @returns The reply message.
+ */
+export async function replyMessageWithContainer(message: Message, container: CustomContainerBuilder | ContainerBuilder) {
+	return await message.reply({
+		components: [container],
+		flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+	});
+}
+
+/**
+ * Validates the voice state of the caller and the bot for a message.
+ *
+ * @param message - The message object.
+ * @param requireBotConnected - Whether the bot must be connected to a voice channel.
+ * @returns True if voice state is valid and action can proceed, false otherwise.
+ */
+export async function checkVoiceStateForMessage(
+	message: Message,
+	requireBotConnected = false
+): Promise<boolean> {
+	const member = message.member!;
+
+	if (!member.voice.channel) {
+		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in a voice channel to run this command.`);
+		await replyMessageWithContainer(message, container);
+		return false;
+	}
+
+	const botVoiceChannel = message.guild?.members.me?.voice.channel;
+
+	if (requireBotConnected && !botVoiceChannel) {
+		const container = new SimpleContainerBuilder(`${EmoteString.Error} The bot is not currently connected to any voice channel.`);
+		await replyMessageWithContainer(message, container);
+		return false;
+	}
+
+	if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
+		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
+		await replyMessageWithContainer(message, container);
 		return false;
 	}
 
