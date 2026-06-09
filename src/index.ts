@@ -19,7 +19,7 @@ import { DeezerPlugin } from "@distube/deezer";
 import { YtDlpPlugin } from "@distube/yt-dlp";
 import { DirectLinkPlugin } from "@distube/direct-link";
 import { type Command } from "./types.js";
-import { deferReply, replyWithContainer } from "./utils/discordInteractions.js";
+import { replyWithContainer } from "./utils/discordInteractions.js";
 import { CustomContainerBuilder, SimpleContainerBuilder } from "./utils/CustomContainerBuilder.js";
 import { EmoteString } from "./utils/emotes.js";
 
@@ -225,7 +225,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 				return;
 			}
 
-			await deferReply(interaction);
+			const container = new SimpleContainerBuilder(`${EmoteString.Search} Processing your request...`);
+			await replyWithContainer(interaction, container);
 
 			try {
 				const selectedUrl = interaction.values[0];

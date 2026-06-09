@@ -132,7 +132,7 @@ export async function checkVoiceState(
 	const member = interaction.member as GuildMember;
 
 	if (!member.voice.channel) {
-		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in a voice channel to run this command.`);
+		const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in a voice channel to run this command.`);
 		await replyWithContainer(interaction, container, true);
 		return false;
 	}
@@ -140,13 +140,13 @@ export async function checkVoiceState(
 	const botVoiceChannel = interaction.guild?.members.me?.voice.channel;
 
 	if (requireBotConnected && !botVoiceChannel) {
-		const container = new SimpleContainerBuilder(`${EmoteString.Error} The bot is not currently connected to any voice channel.`);
+		const container = new SimpleContainerBuilder(`${EmoteString.Warning} The bot is not currently connected to any voice channel.`);
 		await replyWithContainer(interaction, container, true);
 		return false;
 	}
 
 	if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
-		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
+		const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
 		await replyWithContainer(interaction, container, true);
 		return false;
 	}
