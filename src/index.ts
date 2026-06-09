@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import ffmpegStatic from "ffmpeg-static";
+
 import {
 	Client,
 	Collection,
@@ -39,16 +41,42 @@ const client = new Client({
 });
 
 // ── DisTube ────────────────────────────────────────────────────────────────────
+const ffmpegPath = ffmpegStatic ?? "ffmpeg";
+console.log(`[Bot] Using ffmpeg at: ${ffmpegPath}`);
+
+// Write a yt-dlp.conf to the working directory so yt-dlp picks it up automatically.
+// This lets us inject cookies and suppress the deprecated --no-call-home warning
+// without forking or monkey-patching the @distube/yt-dlp plugin.
+import { writeFileSync } from "fs";
+const ytDlpConfLines: string[] = [];
+if (process.env.YTDLP_COOKIES_BROWSER) {
+	ytDlpConfLines.push(`--cookies-from-browser ${process.env.YTDLP_COOKIES_BROWSER}`);
+	console.log(`[Bot] yt-dlp: reading cookies from browser: ${process.env.YTDLP_COOKIES_BROWSER}`);
+}
+else if (process.env.YTDLP_COOKIES_FILE) {
+	ytDlpConfLines.push(`--cookies ${process.env.YTDLP_COOKIES_FILE}`);
+	console.log(`[Bot] yt-dlp: using cookies file: ${process.env.YTDLP_COOKIES_FILE}`);
+}
+else {
+	console.warn("[Bot] No YouTube cookies configured. Set YTDLP_COOKIES_BROWSER (e.g. 'chrome') or YTDLP_COOKIES_FILE in .env to avoid bot detection.");
+}
+writeFileSync("yt-dlp.conf", ytDlpConfLines.join("\n"));
+console.log("[Bot] yt-dlp.conf written.");
+
 const distube = new DisTube(client, {
 	emitNewSongOnly: true,
 	emitAddSongWhenCreatingQueue: false,
 	emitAddListWhenCreatingQueue: false,
+	ffmpeg: {
+		path: ffmpegPath,
+	},
 	plugins: [
-		new YtDlpPlugin({ update: false }), // Binary managed by @distube/yt-dlp postinstall
+		// YtDlpPlugin must be LAST — it acts as a catch-all for any URL the other plugins don't handle
 		new SpotifyPlugin(),
 		new DeezerPlugin(),
 		new SoundCloudPlugin(),
 		new DirectLinkPlugin(),
+		new YtDlpPlugin({ update: false }),
 	],
 });
 
