@@ -11,6 +11,8 @@ import leaveCommand from "./commands/leave.js";
 import queueCommand from "./commands/queue.js";
 import nowplayingCommand from "./commands/nowplaying.js";
 import removeCommand from "./commands/remove.js";
+import helpCommand from "./commands/help.js";
+import shuffleCommand from "./commands/shuffle.js";
 
 
 const commands = [
@@ -20,7 +22,9 @@ const commands = [
 	leaveCommand.data.toJSON(),
 	queueCommand.data.toJSON(),
 	nowplayingCommand.data.toJSON(),
-	removeCommand.data.toJSON()
+	removeCommand.data.toJSON(),
+	helpCommand.data.toJSON(),
+	shuffleCommand.data.toJSON(),
 ];
 
 async function deploy() {
