@@ -2,7 +2,6 @@ import {
 	type ChatInputCommandInteraction,
 	SlashCommandBuilder
 } from "discord.js";
-import { getPlayer } from "../music/player.js";
 import { type Command } from "../types.js";
 import { CustomContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { replyWithContainer } from "../utils/discordInteractions.js";
@@ -15,37 +14,32 @@ export const nowplayingCommand: Command = {
 		.setDescription("Show details of the song currently playing"),
 
 	async execute(interaction: ChatInputCommandInteraction) {
-		const player = getPlayer(interaction.guildId!);
-		const current = player.GetCurrentTrack();
+		const queue = interaction.client.distube.getQueue(interaction.guildId!);
+		const current = queue?.songs[0] ?? null;
 
 		const container = new CustomContainerBuilder();
 
 		if (!current) {
-			container.addTexts([
-				`${EmoteString.Info} **Nothing is currently playing.**`
-			]);
-
+			container.addTexts([`${EmoteString.Info} **Nothing is currently playing.**`]);
 			await replyWithContainer(interaction, container);
 			return;
 		}
 
 		container
-			.addTexts([
-				`### ${EmoteString.NowPlaying} Now Playing`
-			])
+			.addTexts([`### ${EmoteString.NowPlaying} Now Playing`])
 			.addLargeSeparator()
 			.addSectionComponents(section => section
 				.addTexts([
-					`## [${current.title}](${current.url})`,
-					`${current.artist}`,
-					`-# \`${current.durationString}\``,
+					`## [${current.name}](${current.url})`,
+					`${current.uploader?.name || "Unknown"}`,
+					`-# \`${current.formattedDuration || "?"}\``,
 				])
 				.setThumbnailAccessory(thumb => thumb
-					.setURL(current.thumbnailUrl || ImageUrls.NoThumbnail)
+					.setURL(current.thumbnail || ImageUrls.NoThumbnail)
 				)
 			)
 			.addFooter({
-				text: `Requested by: <@${current.requestedBy}>`,
+				text: `Requested by: <@${current.user?.id || "Unknown"}>`,
 			});
 
 		await replyWithContainer(interaction, container);

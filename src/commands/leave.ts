@@ -2,7 +2,6 @@ import {
 	type ChatInputCommandInteraction,
 	SlashCommandBuilder
 } from "discord.js";
-import { getPlayer } from "../music/player.js";
 import { type Command } from "../types.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { checkVoiceState, replyWithContainer } from "../utils/discordInteractions.js";
@@ -16,14 +15,19 @@ export const leaveCommand: Command = {
 	async execute(interaction: ChatInputCommandInteraction) {
 		if (!await checkVoiceState(interaction, true)) return;
 
-		const player = getPlayer(interaction.guildId!);
+		const queue = interaction.client.distube.getQueue(interaction.guildId!);
 
-		player.Leave();
+		if (!queue) {
+			const container = new SimpleContainerBuilder(`${EmoteString.Info} **I am not in a voice channel.**`);
+			await replyWithContainer(interaction, container);
+			return;
+		}
+
+		await queue.stop();
 
 		const container = new SimpleContainerBuilder(
 			`${EmoteString.Heart} **Left the voice channel and cleared the queue.**`
 		);
-
 		await replyWithContainer(interaction, container);
 	}
 };
