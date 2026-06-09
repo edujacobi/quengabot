@@ -10,6 +10,7 @@ config.json
 commands/**/*.js
 events/**/*.js
 *.js
+*.cookie
 
 # User-specific stuff
 .idea/**/workspace.xml

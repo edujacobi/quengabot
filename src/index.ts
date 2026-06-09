@@ -48,12 +48,12 @@ console.log(`[Bot] Using ffmpeg at: ${ffmpegPath}`);
 // This lets us inject cookies and suppress the deprecated --no-call-home warning
 // without forking or monkey-patching the @distube/yt-dlp plugin.
 import { writeFileSync } from "fs";
-const ytDlpConfLines: string[] = [];
-if (process.env.YTDLP_COOKIES_BROWSER) {
-	ytDlpConfLines.push(`--cookies-from-browser ${process.env.YTDLP_COOKIES_BROWSER}`);
-	console.log(`[Bot] yt-dlp: reading cookies from browser: ${process.env.YTDLP_COOKIES_BROWSER}`);
-}
-else if (process.env.YTDLP_COOKIES_FILE) {
+const ytDlpConfLines: string[] = [
+	"--remote-components ejs:github",
+	"--js-runtimes node"
+];
+
+if (process.env.YTDLP_COOKIES_FILE) {
 	ytDlpConfLines.push(`--cookies ${process.env.YTDLP_COOKIES_FILE}`);
 	console.log(`[Bot] yt-dlp: using cookies file: ${process.env.YTDLP_COOKIES_FILE}`);
 }
@@ -76,7 +76,7 @@ const distube = new DisTube(client, {
 		new DeezerPlugin(),
 		new SoundCloudPlugin(),
 		new DirectLinkPlugin(),
-		new YtDlpPlugin({ update: false }),
+		new YtDlpPlugin({ update: true }),
 	],
 });
 
