@@ -29,19 +29,26 @@ async function handleHelp(ctx: CommandContext) {
 		const name = command.data.name;
 		const description = command.data.description || "No description provided.";
 		const aliasStr = command.aliases && command.aliases.length > 0
-			? ` (aliases: ${command.aliases.map(a => `\`q!${a}\``).join(", ")})`
+			? `-# aliases: ${command.aliases.map(a => `\`q!${a}\``).join(", ")}`
 			: "";
 
-		container.addTexts([
-			`**/${name}** or **q!${name}**${aliasStr}`,
-			description
-		]).addSmallSeparator();
+		container
+			.addTexts([
+				`**/${name}** or **q!${name}**`,
+				aliasStr,
+				description
+			].filter(Boolean))
+			.addSmallSeparator();
 	});
 
 	// Remove the trailing separator
 	if (container.components.length > 2) {
 		container.components.pop();
 	}
+
+	container
+		.addLargeSeparator()
+		.addImage("https://media.discordapp.net/attachments/670712604187951115/1514037417429176370/Quengabot_Header.png");
 
 	await ctx.reply(container);
 }
