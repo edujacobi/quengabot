@@ -3,6 +3,8 @@ dotenv.config();
 
 import play from "play-dl";
 import yts from "yt-search";
+import http from "http";
+import https from "https";
 import { type Readable } from "stream";
 import { type Track } from "../types.js";
 import { spotifyHelper } from "./spotifyHelper.js";
@@ -199,6 +201,24 @@ async function resolveDeezer(url: string, requestedBy: string): Promise<Track[]>
  * High-level resolver for URLs from various music sources.
  */
 export async function resolveUrl(url: string, requestedBy: string): Promise<Track[]> {
+	// 0. Check for direct audio URL first
+	const isAudioUrl = /\.(mp3|ogg|wav|aac|flac|m4a|webm|opus)(?:\?|$)/i.test(url);
+	if (isAudioUrl) {
+		console.log(`[Resolver] Resolving Direct Audio URL: ${url}`);
+		const filename = url.split("/").pop()?.split("?")[0] || "Direct Audio";
+		return [{
+			id: `direct_audio_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+			title: decodeURIComponent(filename),
+			artist: "Direct Link",
+			url: url,
+			thumbnailUrl: "",
+			duration: 0,
+			durationString: "Live/Unknown",
+			source: "direct" as const,
+			requestedBy
+		}];
+	}
+
 	// 1. Check Deezer first
 	if (url.includes("deezer.com") || url.includes("deezer.page.link")) {
 		console.log(`[Resolver] Resolving Deezer URL: ${url}`);
@@ -350,16 +370,75 @@ async function authorizeSoundCloud() {
  * Returns a playable audio stream and input type for @discordjs/voice.
  * If the track is Spotify or Deezer, it searches SoundCloud first to lazy-resolve the audio stream.
  */
+/**
+ * Fetch a raw HTTP/HTTPS audio stream from a direct URL.
+ */
+function streamDirectUrl(url: string): Promise<Readable> {
+	return new Promise((resolve, reject) => {
+		const protocol = url.startsWith("https") ? https : http;
+		protocol.get(url, (response) => {
+			if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+				// Follow single redirect
+				streamDirectUrl(response.headers.location).then(resolve).catch(reject);
+				return;
+			}
+			if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+				reject(new Error(`Direct URL returned HTTP ${response.statusCode}`));
+				return;
+			}
+			resolve(response as unknown as Readable);
+		}).on("error", reject);
+	});
+}
+
 export async function getAudioStream(track: Track): Promise<{ stream: Readable; type: string }> {
 	let targetUrl = track.url;
 	console.log(`[Resolver] Getting audio stream for track: "${track.title}" by ${track.artist} (Source: ${track.source})`);
 
-	if (track.source === "spotify" || track.source === "deezer" || track.source === "soundcloud" || track.source === "youtube" || targetUrl.includes("soundcloud.com")) {
-		await authorizeSoundCloud();
+	// --- 1. Direct audio URL (raw HTTP/HTTPS stream) ---
+	if (track.source === "direct") {
+		console.log(`[Resolver] Streaming direct audio URL: ${targetUrl}`);
+		const stream = await streamDirectUrl(targetUrl);
+		return { stream, type: "arbitrary" };
 	}
 
-	// For platforms without direct streams (Spotify / Deezer / YouTube / general search placeholders), search SoundCloud.
-	if (track.source === "spotify" || track.source === "deezer" || track.source === "youtube") {
+	const hasYoutubeCookie = !!process.env.YOUTUBE_COOKIE;
+
+	// --- 2. YouTube with Cookie Bypass ---
+	// Try to stream YouTube directly using the cookie configured in .env.
+	// play-dl may still fail with "Invalid URL" if YouTube's bot detection blocks it —
+	// in that case we fall through to the SoundCloud search path below.
+	if (track.source === "youtube" && hasYoutubeCookie) {
+		console.log(`[Resolver] Attempting YouTube direct stream via cookie bypass: ${targetUrl}`);
+		try {
+			const stream = await play.stream(targetUrl, {
+				discordPlayerCompatibility: true
+			});
+			console.log(`[Resolver] YouTube stream successful (type: ${stream.type})`);
+			return {
+				stream: stream.stream,
+				type: stream.type
+			};
+		}
+		catch (err: unknown) {
+			const error = err as Error;
+			console.warn(`[Resolver] YouTube direct stream failed (${error.message}). Falling back to SoundCloud search...`);
+			// Fall through — do NOT re-throw. The SoundCloud path below will handle it.
+		}
+	}
+
+	// --- 3. SoundCloud path ---
+	// Covers: SoundCloud tracks, Spotify/Deezer (lazy-resolved via search),
+	// YouTube without cookie, and YouTube where the cookie bypass failed above.
+	const shouldSearchSoundCloud =
+		track.source === "spotify" ||
+		track.source === "deezer" ||
+		track.source === "youtube"; // YouTube always falls through here if cookie bypass didn't return early
+
+	await authorizeSoundCloud();
+
+	// Lazy-resolve a SoundCloud URL for non-SoundCloud sources
+	if (shouldSearchSoundCloud) {
 		const searchString = `${track.title} ${track.artist}`;
 		console.log(`[Resolver] Searching SoundCloud for matching audio: "${searchString}"`);
 		const searchResults = await play.search(searchString, {
@@ -373,9 +452,9 @@ export async function getAudioStream(track: Track): Promise<{ stream: Readable; 
 			throw new Error(errMsg);
 		}
 		targetUrl = scTrack.url;
-		console.log(`[Resolver] Matched SoundCloud URL: ${targetUrl}`);
+		console.log(`[Resolver] Matched SoundCloud track: "${scTrack.name}" - ${targetUrl}`);
 
-		// Update track metadata to show SoundCloud info
+		// Update track metadata with SoundCloud info
 		track.title = scTrack.name;
 		track.artist = scTrack.user?.name || "Unknown Artist";
 		track.thumbnailUrl = scTrack.thumbnail || "";
@@ -386,7 +465,8 @@ export async function getAudioStream(track: Track): Promise<{ stream: Readable; 
 		}
 	}
 
-	console.log(`[Resolver] Streaming audio from SoundCloud URL: ${targetUrl}`);
+	// Stream from SoundCloud (or the resolved SoundCloud URL)
+	console.log(`[Resolver] Streaming from SoundCloud: ${targetUrl}`);
 	try {
 		const stream = await play.stream(targetUrl, {
 			discordPlayerCompatibility: true
@@ -397,7 +477,7 @@ export async function getAudioStream(track: Track): Promise<{ stream: Readable; 
 		};
 	}
 	catch (streamErr) {
-		console.warn(`[Resolver] Direct stream failed for "${track.title}" (geoblocked/restricted). Searching SoundCloud fallback alternatives...`);
+		console.warn(`[Resolver] SoundCloud stream failed for "${track.title}" (geoblocked/restricted). Searching for alternatives...`);
 		const searchString = `${track.title} ${track.artist}`;
 		const searchResults = await play.search(searchString, {
 			limit: 3,
@@ -407,12 +487,12 @@ export async function getAudioStream(track: Track): Promise<{ stream: Readable; 
 		for (const altTrack of searchResults) {
 			if (altTrack.url && altTrack.url !== targetUrl) {
 				try {
-					console.log(`[Resolver] Trying alternative SoundCloud track URL: ${altTrack.url}`);
+					console.log(`[Resolver] Trying alternative SoundCloud track: "${altTrack.name}" - ${altTrack.url}`);
 					const stream = await play.stream(altTrack.url, {
 						discordPlayerCompatibility: true
 					});
 
-					// Update metadata with the working alternative info
+					// Update metadata with the working alternative
 					track.title = altTrack.name;
 					track.artist = altTrack.user?.name || "Unknown Artist";
 					track.thumbnailUrl = altTrack.thumbnail || "";
@@ -427,13 +507,14 @@ export async function getAudioStream(track: Track): Promise<{ stream: Readable; 
 						type: stream.type
 					};
 				}
-				catch {
-					// Silent catch to try the next alternative
+				catch (altErr: unknown) {
+					const altError = altErr as Error;
+					console.warn(`[Resolver] Alternative also failed: ${altError.message}`);
 				}
 			}
 		}
 
-		// Rethrow original error if no alternatives succeeded
+		// All alternatives exhausted — rethrow the original error
 		throw streamErr;
 	}
 }
