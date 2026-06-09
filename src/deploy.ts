@@ -1,5 +1,7 @@
-import { REST, Routes } from "discord.js";
 import dotenv from "dotenv";
+dotenv.config();
+
+import { REST, Routes } from "discord.js";
 
 // Import commands
 import playCommand from "./commands/play.js";
@@ -10,8 +12,6 @@ import queueCommand from "./commands/queue.js";
 import nowplayingCommand from "./commands/nowplaying.js";
 import removeCommand from "./commands/remove.js";
 
-// Load environmental variables
-dotenv.config();
 
 const commands = [
 	playCommand.data.toJSON(),

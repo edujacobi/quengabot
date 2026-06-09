@@ -66,10 +66,7 @@ export const queueCommand: Command = {
 
 		upcomingContent += `\n\n**Total Tracks:** ${queue.length + (current ? 1 : 0)} | **Total Queue Duration:** ${totalDurationStr}`;
 
-		const upcomingSection = new CustomSectionBuilder()
-			.addTexts([upcomingContent]);
-
-		container.addSectionComponents(upcomingSection);
+		container.addTexts([upcomingContent]);
 
 		await replyWithContainer(interaction, container);
 	}

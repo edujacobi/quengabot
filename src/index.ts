@@ -1,3 +1,14 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+import ffmpeg from "ffmpeg-static";
+if (ffmpeg) {
+	process.env.FFMPEG_PATH = ffmpeg;
+	console.log(`[Bot] Found ffmpeg-static. Set FFMPEG_PATH to: ${ffmpeg}`);
+} else {
+	console.warn("[Bot] ffmpeg-static was not found. Make sure ffmpeg is installed globally in your system.");
+}
+
 import {
 	Client,
 	Collection,
@@ -6,7 +17,6 @@ import {
 	type GuildMember,
 	type TextBasedChannel
 } from "discord.js";
-import dotenv from "dotenv";
 import { getPlayer } from "./music/player.js";
 import { resolveUrl } from "./music/resolver.js";
 import { type Command } from "./types.js";
@@ -68,8 +78,6 @@ const handleExit = (signal: string) => {
 process.on("SIGINT", () => handleExit("SIGINT"));
 process.on("SIGTERM", () => handleExit("SIGTERM"));
 
-// Load environmental variables
-dotenv.config();
 
 // Store commands
 const commands = new Collection<string, Command>();
@@ -169,3 +177,12 @@ if (process.env.DISCORD_TOKEN) {
 else {
 	console.error("[Bot] Error: DISCORD_TOKEN is missing in the environmental variables (.env).");
 }
+
+// Global Process Event Listeners to prevent abrupt crashes
+process.on("unhandledRejection", (reason, promise) => {
+	console.error("[Process] Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+	console.error("[Process] Uncaught Exception:", error);
+});

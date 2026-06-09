@@ -1,23 +1,20 @@
-import play, { 
-	type SpotifyTrack, 
-	type SpotifyPlaylist, 
-	type SpotifyAlbum
-} from "play-dl";
-import { type Track } from "../types.js";
-import { type Readable } from "stream";
+import dotenv from "dotenv";
+dotenv.config();
 
-// Setup Spotify tokens if provided in .env
-if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
+import play from "play-dl";
+import { type Readable } from "stream";
+import { type Track } from "../types.js";
+import { spotifyHelper } from "./spotifyHelper.js";
+
+// Setup YouTube Cookie if provided in .env
+if (process.env.YOUTUBE_COOKIE) {
 	play.setToken({
-		spotify: {
-			client_id: process.env.SPOTIFY_CLIENT_ID,
-			client_secret: process.env.SPOTIFY_CLIENT_SECRET,
-			refresh_token: "",
-			market: "US"
+		youtube: {
+			cookie: process.env.YOUTUBE_COOKIE
 		}
 	}).catch((err: unknown) => {
 		const error = err as Error;
-		console.error("[Resolver] Failed to authorize Spotify Client Credentials in play-dl:", error.message);
+		console.error("[Resolver] Failed to set YouTube Cookie in play-dl:", error.message);
 	});
 }
 
@@ -38,71 +35,71 @@ export function formatDuration(seconds: number): string {
 
 // Interfaces for Deezer API response payloads
 interface DeezerArtist {
-  name: string;
+	name: string;
 }
 
 interface DeezerAlbumRef {
-  cover_medium?: string;
-  cover_big?: string;
+	cover_medium?: string;
+	cover_big?: string;
 }
 
 interface DeezerTrackData {
-  id: number;
-  title: string;
-  artist: DeezerArtist;
-  album?: DeezerAlbumRef;
-  duration: number;
-  link: string;
+	id: number;
+	title: string;
+	artist: DeezerArtist;
+	album?: DeezerAlbumRef;
+	duration: number;
+	link: string;
 }
 
 interface DeezerError {
-  message: string;
+	message: string;
 }
 
 interface DeezerTrackResponse extends DeezerTrackData {
-  error?: DeezerError;
+	error?: DeezerError;
 }
 
 interface DeezerPlaylistResponse {
-  title: string;
-  picture_medium?: string;
-  tracks?: {
-    data: DeezerTrackData[];
-  };
-  error?: DeezerError;
+	title: string;
+	picture_medium?: string;
+	tracks?: {
+		data: DeezerTrackData[];
+	};
+	error?: DeezerError;
 }
 
 interface DeezerAlbumResponse {
-  cover_medium?: string;
-  tracks?: {
-    data: {
-      id: number;
-      title: string;
-      artist: DeezerArtist;
-      duration: number;
-    }[];
-  };
-  error?: DeezerError;
+	cover_medium?: string;
+	tracks?: {
+		data: {
+			id: number;
+			title: string;
+			artist: DeezerArtist;
+			duration: number;
+		}[];
+	};
+	error?: DeezerError;
 }
 
 // Custom interfaces to wrap SoundCloud types since the play-dl typings are incomplete
 interface ResolvableSoundCloudTrack {
-  id: number;
-  name: string;
-  duration: number;
-  url: string;
-  thumbnail?: string;
-  user?: {
-    username?: string;
-  };
+	id: number;
+	name: string;
+	durationInSec: number;
+	permalink: string;
+	thumbnail?: string;
+	user?: {
+		name?: string;
+	};
 }
 
 interface ResolvableSoundCloudPlaylist {
-  id: number;
-  name: string;
-  url: string;
-  thumbnail?: string;
-  all_tracks(): Promise<ResolvableSoundCloudTrack[]>;
+	id: number;
+	name: string;
+	permalink: string;
+	thumbnail?: string;
+	all_tracks(): Promise<ResolvableSoundCloudTrack[]>;
 }
 
 /**
@@ -203,63 +200,44 @@ async function resolveDeezer(url: string, requestedBy: string): Promise<Track[]>
 export async function resolveUrl(url: string, requestedBy: string): Promise<Track[]> {
 	// 1. Check Deezer first
 	if (url.includes("deezer.com") || url.includes("deezer.page.link")) {
+		console.log(`[Resolver] Resolving Deezer URL: ${url}`);
 		return resolveDeezer(url, requestedBy);
 	}
 
 	// 2. Check Spotify
 	const spType = play.sp_validate(url);
 	if (spType !== false) {
-		if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
-			throw new Error(
-				"Spotify client credentials are not configured on the bot. " +
-        "Please add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` to the `.env` file."
-			);
-		}
-		const data = await play.spotify(url);
-		if (spType === "track") {
-			const trackData = data as SpotifyTrack;
-			return [{
-				id: `spotify_track_${trackData.id}_${Date.now()}`,
-				title: trackData.name,
-				artist: trackData.artists?.map(a => a.name).join(", ") || "Unknown Artist",
-				url: url,
-				thumbnailUrl: trackData.thumbnail?.url || "",
-				duration: trackData.durationInSec || 0,
-				durationString: formatDuration(trackData.durationInSec || 0),
-				source: "spotify",
-				requestedBy
-			}];
-		}
-		else {
-			// Playlist or Album
-			const listData = data as SpotifyPlaylist | SpotifyAlbum;
-			const tracks = await listData.all_tracks();
-			return tracks.map(track => ({
-				id: `spotify_track_${track.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-				title: track.name,
-				artist: track.artists?.map(a => a.name).join(", ") || "Unknown Artist",
-				url: track.url || url,
-				thumbnailUrl: track.thumbnail?.url || listData.thumbnail?.url || "",
-				duration: track.durationInSec || 0,
-				durationString: formatDuration(track.durationInSec || 0),
-				source: "spotify",
-				requestedBy
-			}));
-		}
+		console.log(`[Resolver] Resolving Spotify URL: ${url}`);
+		const tracks = await spotifyHelper.resolveUrl(url);
+		return tracks.map(track => ({
+			id: track.id,
+			title: track.title,
+			artist: track.artist,
+			url: track.url,
+			thumbnailUrl: track.thumbnailUrl,
+			duration: track.duration,
+			durationString: formatDuration(track.duration),
+			source: "spotify" as const,
+			requestedBy
+		}));
 	}
 
 	// 3. Check SoundCloud
+	if (url.includes("soundcloud.com")) {
+		console.log(`[Resolver] Resolving SoundCloud URL: ${url}`);
+		await authorizeSoundCloud();
+	}
 	const soType = await play.so_validate(url);
 	if (soType !== false) {
 		const data = await play.soundcloud(url);
 		if (soType === "track") {
 			const trackData = data as unknown as ResolvableSoundCloudTrack;
-			const secs = Math.round((trackData.duration || 0) / 1000);
+			const secs = trackData.durationInSec || 0;
 			return [{
 				id: `soundcloud_track_${trackData.id}_${Date.now()}`,
 				title: trackData.name,
-				artist: trackData.user?.username || "Unknown Artist",
-				url: trackData.url,
+				artist: trackData.user?.name || "Unknown Artist",
+				url: trackData.permalink || url,
 				thumbnailUrl: trackData.thumbnail || "",
 				duration: secs,
 				durationString: formatDuration(secs),
@@ -272,12 +250,12 @@ export async function resolveUrl(url: string, requestedBy: string): Promise<Trac
 			const listData = data as unknown as ResolvableSoundCloudPlaylist;
 			const tracks = await listData.all_tracks();
 			return tracks.map(track => {
-				const secs = Math.round((track.duration || 0) / 1000);
+				const secs = track.durationInSec || 0;
 				return {
 					id: `soundcloud_track_${track.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
 					title: track.name,
-					artist: track.user?.username || "Unknown Artist",
-					url: track.url,
+					artist: track.user?.name || "Unknown Artist",
+					url: track.permalink || url,
 					thumbnailUrl: track.thumbnail || listData.thumbnail || "",
 					duration: secs,
 					durationString: formatDuration(secs),
@@ -288,38 +266,89 @@ export async function resolveUrl(url: string, requestedBy: string): Promise<Trac
 		}
 	}
 
-	// 4. Check YouTube (includes YouTube Music)
+	// 4. Check YouTube (includes YouTube Music) -> Redirect to Spotify Search
 	const ytType = play.yt_validate(url);
 	if (ytType !== false) {
+		console.log(`[Resolver] Intercepted YouTube URL: ${url} (Resolving via Spotify fallback...)`);
 		if (ytType === "video") {
 			const videoInfo = await play.video_info(url);
 			const video = videoInfo.video_details;
+			const queryStr = `${video.title} ${video.channel?.name || ""}`;
+			try {
+				const spotifyResults = await spotifyHelper.searchTracks(queryStr, 1);
+				if (spotifyResults.length > 0) {
+					const track = spotifyResults[0];
+					return [{
+						id: track.id,
+						title: track.title,
+						artist: track.artist,
+						url: track.url,
+						thumbnailUrl: track.thumbnailUrl,
+						duration: track.duration,
+						durationString: formatDuration(track.duration),
+						source: "spotify",
+						requestedBy
+					}];
+				}
+			}
+			catch (err) {
+				console.error("[Resolver] Error resolving YouTube video on Spotify:", err);
+			}
+
+			// Fallback to Spotify source metadata mapping so it streams from SoundCloud
 			return [{
-				id: `youtube_track_${video.id}_${Date.now()}`,
+				id: `spotify_fallback_${video.id}_${Date.now()}`,
 				title: video.title || "Unknown Title",
 				artist: video.channel?.name || "Unknown Channel",
-				url: video.url,
+				url: `https://open.spotify.com/track/${video.id}`,
 				thumbnailUrl: video.thumbnails[0]?.url || "",
 				duration: video.durationInSec,
 				durationString: formatDuration(video.durationInSec),
-				source: "youtube",
+				source: "spotify",
 				requestedBy
 			}];
 		}
 		else if (ytType === "playlist") {
 			const playlistInfo = await play.playlist_info(url, { incomplete: true });
 			const videos = await playlistInfo.all_videos();
-			return videos.map(video => ({
-				id: `youtube_track_${video.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-				title: video.title || "Unknown Title",
-				artist: video.channel?.name || "Unknown Channel",
-				url: video.url,
-				thumbnailUrl: video.thumbnails[0]?.url || "",
-				duration: video.durationInSec,
-				durationString: formatDuration(video.durationInSec),
-				source: "youtube",
-				requestedBy
+
+			const spotifyTracks = await Promise.all(videos.map(async (video) => {
+				const queryStr = `${video.title} ${video.channel?.name || ""}`;
+				try {
+					const spotifyResults = await spotifyHelper.searchTracks(queryStr, 1);
+					if (spotifyResults.length > 0) {
+						const track = spotifyResults[0];
+						return {
+							id: track.id,
+							title: track.title,
+							artist: track.artist,
+							url: track.url,
+							thumbnailUrl: track.thumbnailUrl,
+							duration: track.duration,
+							durationString: formatDuration(track.duration),
+							source: "spotify" as const,
+							requestedBy
+						};
+					}
+				}
+				catch (err) {
+					console.error("[Resolver] Error resolving YouTube playlist track on Spotify:", err);
+				}
+
+				return {
+					id: `spotify_fallback_${video.id}_${Date.now()}`,
+					title: video.title || "Unknown Title",
+					artist: video.channel?.name || "Unknown Channel",
+					url: `https://open.spotify.com/track/${video.id}`,
+					thumbnailUrl: video.thumbnails[0]?.url || "",
+					duration: video.durationInSec,
+					durationString: formatDuration(video.durationInSec),
+					source: "spotify" as const,
+					requestedBy
+				};
 			}));
+
+			return spotifyTracks;
 		}
 	}
 
@@ -327,39 +356,74 @@ export async function resolveUrl(url: string, requestedBy: string): Promise<Trac
 }
 
 /**
- * Searches YouTube for queries and returns the top results.
+ * Searches Spotify for queries and returns the top results.
  */
 export async function searchTracks(query: string, limit = 5): Promise<Omit<Track, "requestedBy">[]> {
-	const searchResults = await play.search(query, { limit, source: { youtube: "video" } });
-	return searchResults.map(video => ({
-		id: `search_result_${video.id}_${Date.now()}`,
-		title: video.title || "Unknown Title",
-		artist: video.channel?.name || "Unknown Channel",
-		url: video.url,
-		thumbnailUrl: video.thumbnails[0]?.url || "",
-		duration: video.durationInSec,
-		durationString: formatDuration(video.durationInSec),
-		source: "search" as const
+	const results = await spotifyHelper.searchTracks(query, limit);
+	return results.map(track => ({
+		id: track.id,
+		title: track.title,
+		artist: track.artist,
+		url: track.url,
+		thumbnailUrl: track.thumbnailUrl,
+		duration: track.duration,
+		durationString: formatDuration(track.duration),
+		source: "spotify" as const
 	}));
+}
+
+let soundcloudAuthorized = false;
+async function authorizeSoundCloud() {
+	if (soundcloudAuthorized) return;
+	try {
+		console.log("[Resolver] Authorizing SoundCloud client...");
+		const clientID = await play.getFreeClientID();
+		await play.setToken({
+			soundcloud: {
+				client_id: clientID
+			}
+		});
+		soundcloudAuthorized = true;
+		console.log("[Resolver] SoundCloud client authorized successfully.");
+	}
+	catch (err: unknown) {
+		const error = err as Error;
+		console.error("[Resolver] Failed to authorize SoundCloud client:", error.message);
+		throw new Error(`SoundCloud authorization failed: ${error.message}`);
+	}
 }
 
 /**
  * Returns a playable audio stream and input type for @discordjs/voice.
- * If the track is Spotify or Deezer, it searches YouTube first to lazy-resolve the audio stream.
+ * If the track is Spotify or Deezer, it searches SoundCloud first to lazy-resolve the audio stream.
  */
 export async function getAudioStream(track: Track): Promise<{ stream: Readable; type: string }> {
 	let targetUrl = track.url;
+	console.log(`[Resolver] Getting audio stream for track: "${track.title}" by ${track.artist} (Source: ${track.source})`);
 
-	// For platforms without direct streams (Spotify / Deezer / general search placeholders), search YouTube.
-	if (track.source === "spotify" || track.source === "deezer") {
-		const searchString = `${track.title} ${track.artist}`;
-		const searchResults = await play.search(searchString, { limit: 1, source: { youtube: "video" } });
-		if (searchResults.length === 0) {
-			throw new Error(`Could not find a matching YouTube audio stream for track: "${track.title}" by ${track.artist}`);
-		}
-		targetUrl = searchResults[0].url;
+	if (track.source === "spotify" || track.source === "deezer" || track.source === "soundcloud" || targetUrl.includes("soundcloud.com")) {
+		await authorizeSoundCloud();
 	}
 
+	// For platforms without direct streams (Spotify / Deezer / general search placeholders), search SoundCloud.
+	if (track.source === "spotify" || track.source === "deezer") {
+		const searchString = `${track.title} ${track.artist}`;
+		console.log(`[Resolver] Searching SoundCloud for matching audio: "${searchString}"`);
+		const searchResults = await play.search(searchString, {
+			limit: 1,
+			source: { soundcloud: "tracks" }
+		});
+		const scTrack = searchResults[0];
+		if (!scTrack || !scTrack.url) {
+			const errMsg = `Could not find a matching SoundCloud audio stream for track: "${track.title}" by ${track.artist}`;
+			console.error(`[Resolver] ${errMsg}`);
+			throw new Error(errMsg);
+		}
+		targetUrl = scTrack.url;
+		console.log(`[Resolver] Matched SoundCloud URL: ${targetUrl}`);
+	}
+
+	console.log(`[Resolver] Streaming audio from SoundCloud URL: ${targetUrl}`);
 	// Get stream from YouTube/SoundCloud URL
 	const stream = await play.stream(targetUrl, {
 		discordPlayerCompatibility: true
