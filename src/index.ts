@@ -32,6 +32,7 @@ import playCommand from "./commands/play.js";
 import queueCommand from "./commands/queue.js";
 import removeCommand from "./commands/remove.js";
 import helpCommand from "./commands/help.js";
+import shuffleCommand from "./commands/shuffle.js";
 
 // ── Discord Client ─────────────────────────────────────────────────────────────
 const client = new Client({
