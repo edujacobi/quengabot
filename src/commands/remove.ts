@@ -62,7 +62,7 @@ async function handleRemove(ctx: CommandContext, songIndex: number) {
 	queue.songs.splice(songIndex, 1);
 
 	const container = new SimpleContainerBuilder(
-		`${EmoteString.Check} Removed **${song.name}** by *${song.uploader?.name || "Unknown"}* from the queue.`
+		`${EmoteString.Add} Removed **${song.name}** by *${song.uploader?.name || "Unknown"}* from the queue.`
 	);
 	await ctx.reply(container);
 }

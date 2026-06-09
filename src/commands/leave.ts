@@ -34,7 +34,7 @@ async function handleLeave(ctx: CommandContext) {
 	await queue.stop();
 
 	const container = new SimpleContainerBuilder(
-		`${EmoteString.Heart} **Left the voice channel and cleared the queue.**`
+		`${EmoteString.Megaphone} **Left the voice channel and cleared the queue.**`
 	);
 	await ctx.reply(container);
 }

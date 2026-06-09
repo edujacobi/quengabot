@@ -94,14 +94,22 @@ distube
 		);
 		queue.textChannel?.send({
 			components: [container],
-			flags: MessageFlags.IsComponentsV2,
+			flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 		}).catch((err: unknown) => console.error("[DisTube] Failed to send playSong message:", err));
+
+		// Update voice channel status
+		const voiceChannel = queue.voiceChannel;
+		if (voiceChannel) {
+			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
+				body: { status: `${EmoteString.NowPlaying} ${song.name}`.substring(0, 500) }
+			}).catch((err: unknown) => console.error("[DisTube] Failed to set voice channel status:", err));
+		}
 	})
 
 	.on(DisTubeEvents.ADD_SONG, (queue, song) => {
 		console.log(`[DisTube] Added to queue: "${song.name}" in guild ${queue.id}`);
 		const container = new SimpleContainerBuilder(
-			`${EmoteString.Check} Added **[${song.name}](${song.url})** to the queue.`
+			`${EmoteString.Add} Added **[${song.name}](${song.url})** to the queue.`
 		);
 		queue.textChannel?.send({
 			components: [container],
@@ -112,7 +120,7 @@ distube
 	.on(DisTubeEvents.ADD_LIST, (queue, playlist) => {
 		console.log(`[DisTube] Added playlist: "${playlist.name}" (${playlist.songs.length} songs) in guild ${queue.id}`);
 		const container = new SimpleContainerBuilder(
-			`${EmoteString.Check} Added playlist **${playlist.name}** with **${playlist.songs.length}** songs to the queue.`
+			`${EmoteString.Add} Added playlist **${playlist.name}** with **${playlist.songs.length}** songs to the queue.`
 		);
 		queue.textChannel?.send({
 			components: [container],
@@ -123,16 +131,31 @@ distube
 	.on(DisTubeEvents.FINISH, (queue) => {
 		console.log(`[DisTube] Queue finished in guild ${queue.id}`);
 		const container = new SimpleContainerBuilder(
-			`${EmoteString.Heart} **Queue finished.** Add more songs with \`/play\`!`
+			`${EmoteString.Megaphone} **Queue finished.** Add more songs with \`/play\`!`
 		);
 		queue.textChannel?.send({
 			components: [container],
 			flags: MessageFlags.IsComponentsV2,
 		}).catch((err: unknown) => console.error("[DisTube] Failed to send finish message:", err));
+
+		// Clear voice channel status
+		const voiceChannel = queue.voiceChannel;
+		if (voiceChannel) {
+			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
+				body: { status: "" }
+			}).catch((err: unknown) => console.error("[DisTube] Failed to clear voice channel status:", err));
+		}
 	})
 
 	.on(DisTubeEvents.DISCONNECT, (queue) => {
 		console.log(`[DisTube] Disconnected from voice in guild ${queue.id}`);
+		// Clear voice channel status
+		const voiceChannel = queue.voiceChannel;
+		if (voiceChannel) {
+			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
+				body: { status: "" }
+			}).catch((err: unknown) => console.error("[DisTube] Failed to clear voice channel status:", err));
+		}
 	})
 
 	.on(DisTubeEvents.ERROR, (error, queue) => {
@@ -156,6 +179,7 @@ commands.set(queueCommand.data.name, queueCommand);
 commands.set(nowplayingCommand.data.name, nowplayingCommand);
 commands.set(removeCommand.data.name, removeCommand);
 commands.set(helpCommand.data.name, helpCommand);
+commands.set(shuffleCommand.data.name, shuffleCommand);
 
 client.commands = commands;
 
@@ -188,14 +212,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 		if (interaction.customId === "play_search_select") {
 			const member = interaction.member as GuildMember;
 			if (!member.voice.channel) {
-				const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in a voice channel to play music.`);
+				const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in a voice channel to play music.`);
 				await replyWithContainer(interaction, container, true);
 				return;
 			}
 
 			const botVoiceChannel = interaction.guild?.members.me?.voice.channel;
 			if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
-				const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in the same voice channel as the bot to play music.`);
+				const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in the same voice channel as the bot to play music.`);
 				await replyWithContainer(interaction, container, true);
 				return;
 			}
@@ -213,7 +237,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 				// Remove the select menu so it can't be re-triggered
 				await interaction.message.edit({ components: [] }).catch(() => undefined);
 
-				const container = new SimpleContainerBuilder(`${EmoteString.Check} Got it! Adding to queue...`);
+				const container = new SimpleContainerBuilder(`${EmoteString.Add} Got it! Adding to queue...`);
 				await replyWithContainer(interaction, container);
 			}
 			catch (err: unknown) {
