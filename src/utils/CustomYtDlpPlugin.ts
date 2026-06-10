@@ -5,19 +5,29 @@ import fs from "node:fs";
 import yts from "yt-search";
 import { Log } from "./log.js";
 
+interface Cookie {
+	domain: string;
+	path: string;
+	secure: boolean;
+	expirationDate: number;
+	name: string;
+	value: string;
+}
+
 // Helper to parse Netscape cookies file into a JSON cookies array for YouTubePlugin
-function parseNetscapeCookies(filePath: string): any[] {
+function parseNetscapeCookies(filePath: string): Cookie[] {
 	try {
 		if (!fs.existsSync(filePath)) {
 			Log.Warning(`[CustomYtDlpPlugin] Cookie file not found at ${filePath}. Recommendations might be rate limited.`);
 			return [];
 		}
 		const content = fs.readFileSync(filePath, "utf8");
-		const cookies: any[] = [];
+		const cookies: Cookie[] = [];
 		for (const line of content.split(/\r?\n/)) {
 			if (!line || line.startsWith("#")) continue;
 			const parts = line.split("\t");
 			if (parts.length < 7) continue;
+
 			cookies.push({
 				domain: parts[0],
 				path: parts[2],
@@ -51,7 +61,7 @@ export class CustomYtDlpPlugin extends YtDlpPlugin {
 	}
 
 	// @ts-expect-error: Override return type is wider than never[]
-	override async getRelatedSongs(song?: any) {
+	override async getRelatedSongs(song?: Song) {
 		try {
 			if (!song) return [];
 			Log.Info(`[CustomYtDlpPlugin] Fetching related songs for: "${song.name}"`);
