@@ -3,6 +3,7 @@ import { type Command } from "../types.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
 import { CommandContext } from "../utils/commandContext.js";
+import { Log } from "../utils/log.js";
 
 export const leaveCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -32,6 +33,16 @@ async function handleLeave(ctx: CommandContext) {
 	}
 
 	await queue.stop();
+
+	const member = ctx.member.voice;
+	if (member.channel) {
+		try {
+			await member.disconnect();
+		}
+		catch (err: unknown) {
+			Log.Error("[Bot] Error disconnecting from voice channel:" + (err instanceof Error ? ` ${err.message}` : ""));
+		}
+	}
 
 	const container = new SimpleContainerBuilder(
 		`${EmoteString.Megaphone} **Left the voice channel and cleared the queue.**`
