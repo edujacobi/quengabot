@@ -3,6 +3,7 @@ import { type Command } from "../types.js";
 import { CommandContext } from "../utils/commandContext.js";
 import { CustomContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
+import { ImageUrls } from "../utils/imageUrls.js";
 
 export const helpCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -28,8 +29,9 @@ async function handleHelp(ctx: CommandContext) {
 	commands.forEach((command) => {
 		const name = command.data.name;
 		const description = command.data.description || "No description provided.";
-		const aliasStr = command.aliases && command.aliases.length > 0
-			? `-# aliases: ${command.aliases.map(a => `\`q!${a}\``).join(", ")}`
+		const hasAlias = command.aliases && command.aliases.length > 0;
+		const aliasStr = hasAlias
+			? `-# aliases: ${command.aliases!.map(a => `\`q!${a}\``).join(", ")}`
 			: "";
 
 		container
@@ -48,7 +50,7 @@ async function handleHelp(ctx: CommandContext) {
 
 	container
 		.addLargeSeparator()
-		.addImage("https://media.discordapp.net/attachments/670712604187951115/1514037417429176370/Quengabot_Header.png");
+		.addImage(ImageUrls.Help);
 
 	await ctx.reply(container);
 }
