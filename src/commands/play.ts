@@ -74,7 +74,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 		try {
 			console.log(`[PlayCommand] Searching YouTube for: "${query}"`);
 			const result = await yts(query);
-			const videos = result.videos.slice(0, 5);
+			const videos = result.videos.slice(0, 10);
 
 			if (videos.length === 0) {
 				const container = new SimpleContainerBuilder(`${EmoteString.Error} No results found for: \`${query}\``);
