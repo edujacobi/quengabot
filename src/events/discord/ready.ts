@@ -5,6 +5,6 @@ export default {
 	name: Events.ClientReady,
 	once: true,
 	execute(client: Client) {
-		Log.Info(`[Bot] Logged in as ${client.user?.tag}!`);
+		Log.Success(`[Bot] Logged in as ${client.user?.tag}!`);
 	}
 };

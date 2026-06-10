@@ -228,12 +228,12 @@ process.on("uncaughtException", (error) => Log.Error("[Process] Uncaught Excepti
 async function start() {
 	Log.Info("[Bot] Loading commands...");
 	await loadCommands(commandsPath);
-	Log.Info(`[Bot] Loaded ${client.commands.size} commands.`);
+	Log.Success(`[Bot] Loaded ${client.commands.size} commands.`);
 
 	Log.Info("[Bot] Loading Discord events...");
 	await loadDiscordEvents(discordEventsPath);
 
-	Log.Info("[Bot] Loading DisTube events...");
+	Log.Success("[Bot] Loading DisTube events...");
 	await loadDisTubeEvents(distubeEventsPath);
 
 	// ── Login ──────────────────────────────────────────────────────────────────
