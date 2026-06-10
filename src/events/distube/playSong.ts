@@ -1,0 +1,31 @@
+import { Events, type Queue, type Song } from "distube";
+import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
+import { sendMessageInTextChannel } from "../../utils/discordInteractions.js";
+import { EmoteString } from "../../utils/emotes.js";
+
+export default {
+	name: Events.PLAY_SONG,
+	once: false,
+	async execute(queue: Queue, song: Song) {
+		console.log(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
+
+		const container = new SimpleContainerBuilder(
+			`${EmoteString.NowPlaying} **Now playing:** **[${song.name}](${song.url})** by ${song.uploader?.name || "Unknown"}\n-# requested by <@${song.user?.id || "Unknown"}>`
+		);
+
+		await sendMessageInTextChannel(queue.textChannel, container);
+
+		// Update voice channel status
+		const voiceChannel = queue.voiceChannel;
+		if (voiceChannel) {
+			try {
+				await queue.distube.client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
+					body: { status: `${EmoteString.NowPlaying} ${song.name}`.substring(0, 500) }
+				});
+			}
+			catch (err: unknown) {
+				console.error("[DisTube] Failed to set voice channel status:", err);
+			}
+		}
+	}
+};

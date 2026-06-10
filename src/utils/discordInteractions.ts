@@ -1,4 +1,4 @@
-import { ButtonInteraction, MessageComponentInteraction, MessageFlags, type CommandInteraction, type ContainerBuilder, type DiscordAPIError, type GuildMember, type InteractionEditReplyOptions, type InteractionReplyOptions, type Message, type MessagePayload } from "discord.js";
+import { ButtonInteraction, MessageComponentInteraction, MessageFlags, type CommandInteraction, type ContainerBuilder, type DiscordAPIError, type GuildMember, type GuildTextBasedChannel, type InteractionEditReplyOptions, type InteractionReplyOptions, type Message, type MessageEditOptions, type MessagePayload, type MessageReplyOptions } from "discord.js";
 import { SimpleContainerBuilder, type CustomContainerBuilder } from "./CustomContainerBuilder";
 import { EmoteString } from "./emotes";
 
@@ -72,6 +72,48 @@ export async function replyWithContainer(interaction: CommandInteraction | Butto
 			[MessageFlags.IsComponentsV2, MessageFlags.Ephemeral, MessageFlags.SuppressNotifications] :
 			[MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 	});
+}
+
+/**
+ * Replies to a message, handling deferred or already replied states.
+ *
+ * @param message - The message to reply to.
+ * @param options - The reply options.
+ * @returns The reply message or undefined if an error occurs.
+ */
+export async function replyMessage(message: Message, options: string | MessagePayload | MessageReplyOptions | MessageEditOptions) {
+	try {
+		return await message.reply(options as MessageReplyOptions);
+	}
+	catch (err) {
+		const error = err as DiscordAPIError;
+		console.debug(error);
+
+		const context = "commandName" in message ? `q!${message.commandName}` : ("customId" in message ? `Component: ${message.customId}` : `Unknown Context (${message.content})`);
+
+		console.warn(`Something went wrong with replying message of user ${message.author.displayName} (Id: ${message.author.id}) [${context}] in server ${message.guild?.name} (Id: ${message.guild?.id}). Error: ${error.message}`);
+	}
+}
+
+/**
+ * Sends a message with a custom container (UI) to a text channel.
+ *
+ * @param textChannel - The text channel to send the message to.
+ * @param container - The container builder with components.
+ * @returns The sent message or undefined if an error occurs.
+ */
+export async function sendMessageInTextChannel(textChannel: GuildTextBasedChannel | undefined, container: CustomContainerBuilder | ContainerBuilder) {
+	if (!textChannel) return;
+
+	try {
+		return await textChannel.send({
+			components: [container],
+			flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+		});
+	}
+	catch (err: unknown) {
+		console.error("[DisTube] Failed to send message:", err);
+	}
 }
 
 /**
@@ -162,7 +204,7 @@ export async function checkVoiceState(
  * @returns The reply message.
  */
 export async function replyMessageWithContainer(message: Message, container: CustomContainerBuilder | ContainerBuilder) {
-	return await message.reply({
+	return await replyMessage(message, {
 		components: [container],
 		flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 	});

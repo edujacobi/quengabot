@@ -1,39 +1,23 @@
-import dotenv from "dotenv";
-dotenv.config();
-
-import ffmpegStatic from "ffmpeg-static";
-
+import { DeezerPlugin } from "@distube/deezer";
+import { DirectLinkPlugin } from "@distube/direct-link";
+import { SoundCloudPlugin } from "@distube/soundcloud";
+import { SpotifyPlugin } from "@distube/spotify";
+import { YtDlpPlugin } from "@distube/yt-dlp";
 import {
 	Client,
 	Collection,
 	Events,
 	GatewayIntentBits,
-	type GuildMember,
-	type GuildTextBasedChannel,
-	MessageFlags,
 } from "discord.js";
-import { DisTube, Events as DisTubeEvents } from "distube";
-import { SoundCloudPlugin } from "@distube/soundcloud";
-import { SpotifyPlugin } from "@distube/spotify";
-import { DeezerPlugin } from "@distube/deezer";
-import { YtDlpPlugin } from "@distube/yt-dlp";
-import { DirectLinkPlugin } from "@distube/direct-link";
+import { DisTube } from "distube";
+import dotenv from "dotenv";
+import ffmpegStatic from "ffmpeg-static";
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { type Command } from "./types.js";
-import { replyWithContainer } from "./utils/discordInteractions.js";
-import { CustomContainerBuilder, SimpleContainerBuilder } from "./utils/CustomContainerBuilder.js";
-import { EmoteString } from "./utils/emotes.js";
 
-// Import commands
-import leaveCommand from "./commands/leave.js";
-import nextCommand from "./commands/next.js";
-import nowplayingCommand from "./commands/nowplaying.js";
-import pauseCommand from "./commands/pause.js";
-import playCommand from "./commands/play.js";
-import queueCommand from "./commands/queue.js";
-import removeCommand from "./commands/remove.js";
-import helpCommand from "./commands/help.js";
-import shuffleCommand from "./commands/shuffle.js";
-import repeatCommand from "./commands/repeat.js";
+dotenv.config();
 
 // ── Discord Client ─────────────────────────────────────────────────────────────
 const client = new Client({
@@ -87,213 +71,115 @@ const distube = new DisTube(client, {
 
 client.distube = distube;
 
-// ── DisTube events ─────────────────────────────────────────────────────────────
-distube
-	.on(DisTubeEvents.PLAY_SONG, (queue, song) => {
-		console.log(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.NowPlaying} **Now playing:** **[${song.name}](${song.url})** by ${song.uploader?.name || "Unknown"}\n-# requested by <@${song.user?.id || "Unknown"}>`
-		);
-		queue.textChannel?.send({
-			components: [container],
-			flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
-		}).catch((err: unknown) => console.error("[DisTube] Failed to send playSong message:", err));
-
-		// Update voice channel status
-		const voiceChannel = queue.voiceChannel;
-		if (voiceChannel) {
-			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
-				body: { status: `${EmoteString.NowPlaying} ${song.name}`.substring(0, 500) }
-			}).catch((err: unknown) => console.error("[DisTube] Failed to set voice channel status:", err));
-		}
-	})
-
-	.on(DisTubeEvents.ADD_SONG, (queue, song) => {
-		console.log(`[DisTube] Added to queue: "${song.name}" in guild ${queue.id}`);
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.Add} Added **[${song.name}](${song.url})** to the queue.`
-		);
-		queue.textChannel?.send({
-			components: [container],
-			flags: MessageFlags.IsComponentsV2,
-		}).catch((err: unknown) => console.error("[DisTube] Failed to send addSong message:", err));
-	})
-
-	.on(DisTubeEvents.ADD_LIST, (queue, playlist) => {
-		console.log(`[DisTube] Added playlist: "${playlist.name}" (${playlist.songs.length} songs) in guild ${queue.id}`);
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.Add} Added playlist **${playlist.name}** with **${playlist.songs.length}** songs to the queue.`
-		);
-		queue.textChannel?.send({
-			components: [container],
-			flags: MessageFlags.IsComponentsV2,
-		}).catch((err: unknown) => console.error("[DisTube] Failed to send addList message:", err));
-	})
-
-	.on(DisTubeEvents.FINISH, (queue) => {
-		console.log(`[DisTube] Queue finished in guild ${queue.id}`);
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.Megaphone} **Queue finished.** Add more songs with \`/play\`!`
-		);
-		queue.textChannel?.send({
-			components: [container],
-			flags: MessageFlags.IsComponentsV2,
-		}).catch((err: unknown) => console.error("[DisTube] Failed to send finish message:", err));
-
-		// Clear voice channel status
-		const voiceChannel = queue.voiceChannel;
-		if (voiceChannel) {
-			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
-				body: { status: "" }
-			}).catch((err: unknown) => console.error("[DisTube] Failed to clear voice channel status:", err));
-		}
-	})
-
-	.on(DisTubeEvents.DISCONNECT, (queue) => {
-		console.log(`[DisTube] Disconnected from voice in guild ${queue.id}`);
-		// Clear voice channel status
-		const voiceChannel = queue.voiceChannel;
-		if (voiceChannel) {
-			client.rest.put(`/channels/${voiceChannel.id}/voice-status`, {
-				body: { status: "" }
-			}).catch((err: unknown) => console.error("[DisTube] Failed to clear voice channel status:", err));
-		}
-	})
-
-	.on(DisTubeEvents.ERROR, (error, queue) => {
-		console.error(`[DisTube] Error in guild ${queue?.id || "unknown"}:`, error);
-		const container = new SimpleContainerBuilder(
-			`${EmoteString.Error} **Playback error:** ${error.message}`
-		);
-		queue?.textChannel?.send({
-			components: [container],
-			flags: MessageFlags.IsComponentsV2,
-		}).catch((err: unknown) => console.error("[DisTube] Failed to send error message:", err));
-	});
-
 // ── Commands ───────────────────────────────────────────────────────────────────
-const commands = new Collection<string, Command>();
-commands.set(playCommand.data.name, playCommand);
-commands.set(pauseCommand.data.name, pauseCommand);
-commands.set(nextCommand.data.name, nextCommand);
-commands.set(leaveCommand.data.name, leaveCommand);
-commands.set(queueCommand.data.name, queueCommand);
-commands.set(nowplayingCommand.data.name, nowplayingCommand);
-commands.set(removeCommand.data.name, removeCommand);
-commands.set(helpCommand.data.name, helpCommand);
-commands.set(shuffleCommand.data.name, shuffleCommand);
-commands.set(repeatCommand.data.name, repeatCommand);
+client.cooldowns = new Collection<string, Collection<string, number>>();
+client.commands = new Collection<string, Command>();
+client.userLastCommand = new Collection<string, number>();
+client.userLastSync = new Collection<string, number>();
+client.invites = new Collection<number, Collection<string, number>>();
 
-client.commands = commands;
+const commandsPath = path.join(__dirname, "commands");
+const discordEventsPath = path.join(__dirname, "events", "discord");
+const distubeEventsPath = path.join(__dirname, "events", "distube");
 
-// ── Startup ────────────────────────────────────────────────────────────────────
-client.once(Events.ClientReady, () => {
-	console.log(`[Bot] Logged in as ${client.user?.tag}!`);
-});
+async function loadCommands(dir: string) {
+	const files = fs.readdirSync(dir);
 
-// ── Interactions ───────────────────────────────────────────────────────────────
-client.on(Events.InteractionCreate, async (interaction) => {
-	// 1. Slash commands router
-	if (interaction.isChatInputCommand()) {
-		const command = commands.get(interaction.commandName);
-		if (!command) return;
+	for (const file of files) {
+		const filePath = path.join(dir, file);
+		const stat = fs.lstatSync(filePath);
 
-		try {
-			await command.execute(interaction);
+		if (stat.isDirectory()) {
+			await loadCommands(filePath);
 		}
-		catch (err: unknown) {
-			console.error(`[Bot] Error executing command ${interaction.commandName}:`, err);
-			const container = new CustomContainerBuilder()
-				.addTexts([`${EmoteString.Error} An error occurred executing this command: ${(err as Error).message}`]);
-
-			await replyWithContainer(interaction, container, true);
-		}
-	}
-
-	// 2. Dropdown select menu handler (search result picker)
-	if (interaction.isStringSelectMenu()) {
-		if (interaction.customId === "play_search_select") {
-			const member = interaction.member as GuildMember;
-			if (!member.voice.channel) {
-				const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in a voice channel to play music.`);
-				await replyWithContainer(interaction, container, true);
-				return;
-			}
-
-			const botVoiceChannel = interaction.guild?.members.me?.voice.channel;
-			if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
-				const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in the same voice channel as the bot to play music.`);
-				await replyWithContainer(interaction, container, true);
-				return;
-			}
-
-			const container = new SimpleContainerBuilder(`${EmoteString.Search} Processing your request...`);
-			await replyWithContainer(interaction, container);
-
+		else if ((file.endsWith(".ts") || file.endsWith(".js")) && !file.endsWith(".d.ts") && !file.endsWith(".map")) {
 			try {
-				const selectedUrl = interaction.values[0];
+				const moduleUrl = pathToFileURL(filePath).href;
+				const commandModule = await import(moduleUrl);
+				const command: Command = commandModule.default || commandModule;
 
-				await client.distube.play(member.voice.channel, selectedUrl, {
-					member,
-					textChannel: interaction.channel as GuildTextBasedChannel,
-				});
-
-				// Remove the select menu so it can't be re-triggered
-				await interaction.message.edit({ components: [] }).catch(() => undefined);
-
-				const container = new SimpleContainerBuilder(`${EmoteString.Add} Got it! Adding to queue...`);
-				await replyWithContainer(interaction, container);
+				if (command && "data" in command && "execute" in command) {
+					client.commands.set(command.data.name, command);
+					console.log(`[Bot] Command ${file} loaded successfully.`);
+				}
+				else {
+					console.warn(`[Bot] The command at ${filePath} is missing a required "data" or "execute" property.`);
+				}
 			}
-			catch (err: unknown) {
-				const error = err as Error;
-				console.error("[SelectMenu] Error playing selection:", error);
-				const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
-				await replyWithContainer(interaction, container, true);
+			catch (err) {
+				console.error(`[Bot] Error loading command ${file}:`, err);
 			}
 		}
 	}
-});
+}
 
-// ── Message Command Handler (Prefix "q!") ──────────────────────────────────────
-client.on(Events.MessageCreate, async (message) => {
-	// Ignore messages from bots or outside guilds
-	if (message.author.bot || !message.guild) return;
+async function loadDiscordEvents(dir: string) {
+	if (!fs.existsSync(dir)) return;
+	const files = fs.readdirSync(dir);
 
-	const prefix = "q!";
-	if (!message.content.startsWith(prefix)) return;
+	for (const file of files) {
+		const filePath = path.join(dir, file);
+		const stat = fs.lstatSync(filePath);
 
-	// Split message content into command and args
-	const args = message.content.slice(prefix.length).trim().split(/ +/);
-	const commandName = args.shift()?.toLowerCase();
-
-	if (!commandName) return;
-
-	// Find command by name or alias
-	const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases?.includes(commandName));
-
-	if (!command) return;
-
-	try {
-		if (command.executePrefix) {
-			await command.executePrefix(message, args);
+		if (stat.isDirectory()) {
+			await loadDiscordEvents(filePath);
 		}
-		else {
-			const container = new SimpleContainerBuilder(`${EmoteString.Error} This command cannot be run via prefix.`);
-			await message.reply({
-				components: [container],
-				flags: MessageFlags.IsComponentsV2,
-			});
+		else if ((file.endsWith(".ts") || file.endsWith(".js")) && !file.endsWith(".d.ts") && !file.endsWith(".map")) {
+			try {
+				const moduleUrl = pathToFileURL(filePath).href;
+				const eventModule = await import(moduleUrl);
+				const event = eventModule.default || eventModule;
+
+				if (event && "name" in event && "execute" in event) {
+					if (event.once) {
+						client.once(event.name, (...args: unknown[]) => event.execute(...args));
+					}
+					else {
+						client.on(event.name, (...args: unknown[]) => event.execute(...args));
+					}
+					console.log(`[Bot] Discord Event ${file} loaded successfully.`);
+				}
+			}
+			catch (err) {
+				console.error(`[Bot] Error loading Discord event ${file}:`, err);
+			}
 		}
 	}
-	catch (err: unknown) {
-		console.error(`[Prefix] Error executing command ${commandName}:`, err);
-		const container = new SimpleContainerBuilder(`${EmoteString.Error} An error occurred: ${(err as Error).message}`);
-		await message.reply({
-			components: [container],
-			flags: MessageFlags.IsComponentsV2,
-		}).catch(() => undefined);
+}
+
+async function loadDisTubeEvents(dir: string) {
+	if (!fs.existsSync(dir)) return;
+	const files = fs.readdirSync(dir);
+
+	for (const file of files) {
+		const filePath = path.join(dir, file);
+		const stat = fs.lstatSync(filePath);
+
+		if (stat.isDirectory()) {
+			await loadDisTubeEvents(filePath);
+		}
+		else if ((file.endsWith(".ts") || file.endsWith(".js")) && !file.endsWith(".d.ts") && !file.endsWith(".map")) {
+			try {
+				const moduleUrl = pathToFileURL(filePath).href;
+				const eventModule = await import(moduleUrl);
+				const event = eventModule.default || eventModule;
+
+				if (event && "name" in event && "execute" in event) {
+					if (event.once) {
+						client.distube.once(event.name, (...args: unknown[]) => event.execute(...args));
+					}
+					else {
+						client.distube.on(event.name, (...args: unknown[]) => event.execute(...args));
+					}
+					console.log(`[Bot] DisTube Event ${file} loaded successfully.`);
+				}
+			}
+			catch (err) {
+				console.error(`[Bot] Error loading DisTube event ${file}:`, err);
+			}
+		}
 	}
-});
+}
 
 // ── Error guards ───────────────────────────────────────────────────────────────
 client.on(Events.Error, (error) => {
@@ -317,29 +203,53 @@ client.on(Events.ShardResume, (shardId, replayedEvents) => {
 });
 
 const handleExit = (signal: string) => {
-	console.info(`Received ${signal}. Shutting down gracefully...`);
+	console.info(`[Exit] Received ${signal}. Leaving voice channels...`);
+
+	for (const guild of client.guilds.cache.values()) {
+		const member = guild.members.me;
+		if (member?.voice.channel) {
+			member.voice.disconnect().catch((err: unknown) => console.error("[Bot] Error disconnecting from voice channel:", err));
+		}
+	}
+
+	console.info(`[Exit] Received ${signal}. Shutting down gracefully...`);
+
 	client.destroy();
 	process.exit(0);
 };
 
 process.on("SIGINT", () => handleExit("SIGINT"));
 process.on("SIGTERM", () => handleExit("SIGTERM"));
+process.on("unhandledRejection", (reason, promise) => console.error("[Process] Unhandled Rejection at:", promise, "reason:", reason));
+process.on("uncaughtException", (error) => console.error("[Process] Uncaught Exception:", error));
 
-process.on("unhandledRejection", (reason, promise) => {
-	console.error("[Process] Unhandled Rejection at:", promise, "reason:", reason);
-});
+// ── Startup ────────────────────────────────────────────────────────────────────
+async function start() {
+	console.log("[Bot] Loading commands...");
+	await loadCommands(commandsPath);
+	console.log(`[Bot] Loaded ${client.commands.size} commands.`);
 
-process.on("uncaughtException", (error) => {
-	console.error("[Process] Uncaught Exception:", error);
-});
+	console.log("[Bot] Loading Discord events...");
+	await loadDiscordEvents(discordEventsPath);
 
-// ── Login ──────────────────────────────────────────────────────────────────────
-if (process.env.DISCORD_TOKEN) {
-	client.login(process.env.DISCORD_TOKEN).catch((err: unknown) => {
-		const error = err as Error;
-		console.error("[Bot] Failed to log in. Please check your DISCORD_TOKEN in .env:", error.message);
-	});
+	console.log("[Bot] Loading DisTube events...");
+	await loadDisTubeEvents(distubeEventsPath);
+
+	// ── Login ──────────────────────────────────────────────────────────────────
+	if (process.env.DISCORD_TOKEN) {
+		try {
+			await client.login(process.env.DISCORD_TOKEN);
+		}
+		catch (err: unknown) {
+			const error = err as Error;
+			console.error("[Bot] Failed to log in. Please check your DISCORD_TOKEN in .env:", error.message);
+		};
+	}
+	else {
+		console.error("[Bot] Error: DISCORD_TOKEN is missing in the environmental variables (.env).");
+	}
 }
-else {
-	console.error("[Bot] Error: DISCORD_TOKEN is missing in the environmental variables (.env).");
-}
+
+start().catch(err => {
+	console.error("[Bot] Critical error during startup:", err);
+});
