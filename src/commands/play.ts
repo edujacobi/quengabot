@@ -54,26 +54,62 @@ async function handlePlay(ctx: CommandContext, query: string) {
 	if (isUrl) {
 		await ctx.defer();
 		try {
+			Log.Info(`[PlayCommand] Loading URL: "${query}"`);
+
+			const funMessages = [
+				"This one seems good!",
+				"That song is from my time",
+				"I like this one",
+				"Yummy",
+				"Nice choice!",
+				"In my youth, I used to boogie to this song.",
+				"Reminds me of my high school days.",
+				"Oh, yes, a classic!"
+			];
+			const randomMessage = funMessages[Math.floor(Math.random() * funMessages.length)];
+
+			// playSong / addSong events in index.ts handle the UI feedback
+			let container = new SimpleContainerBuilder(`${EmoteString.Search} **Looking it up...** ${randomMessage}`);
+			await ctx.reply(container);
+
 			await ctx.client.distube.play(voiceChannel, query, {
 				member,
 				textChannel: ctx.channel,
 			});
-			// playSong / addSong events in index.ts handle the UI feedback
-			const container = new SimpleContainerBuilder(`${EmoteString.Search} **Looking it up...**`);
+
+			container = new SimpleContainerBuilder(`${EmoteString.Add} **Got it! Adding to queue...**`);
 			await ctx.reply(container);
 		}
 		catch (err: unknown) {
 			const error = err as Error;
 			Log.Error("[PlayCommand] Error playing URL: " + error.message);
+
 			const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
 			await ctx.reply(container, true);
 		}
 	}
 	else {
-		// Text search — show 5-result picker using yt-search (fast, no platform SDK needed)
+		// Text search — show 10-result picker using yt-search (fast, no platform SDK needed)
 		await ctx.defer();
 		try {
 			Log.Info(`[PlayCommand] Searching YouTube for: "${query}"`);
+			const funMessages = [
+				"I think I have that in my CD collection",
+				"One moment while I dust off my turntable...",
+				"Let me check my mixtapes...",
+				"Hold on, I'm checking my vinyl collection...",
+				"I'm flipping through my cassettes...",
+				"My neighbor must have it on vinyl...",
+				"Let me check my MP3 player...",
+				"I'm checking my iPod...",
+				"Maybe it's in my Walkman..."
+			];
+			const randomMessage = funMessages[Math.floor(Math.random() * funMessages.length)];
+
+			// playSong / addSong events in index.ts handle the UI feedback
+			let container = new SimpleContainerBuilder(`${EmoteString.Search} **${randomMessage}**`);
+
+			await ctx.reply(container);
 			const result = await yts(query);
 			const videos = result.videos.slice(0, 10);
 
@@ -83,7 +119,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 				return;
 			}
 
-			const container = new SimpleContainerBuilder(`### ${EmoteString.Search} **Search Results for:** \`${query}\``);
+			container = new SimpleContainerBuilder(`### ${EmoteString.Search} **Search Results for:** \`${query}\``);
 
 			const select = new StringSelectMenuBuilder()
 				.setCustomId("play_search_select")
@@ -107,6 +143,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 		catch (err: unknown) {
 			const error = err as Error;
 			Log.Error("[PlayCommand] Error searching: " + error.message);
+
 			const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
 			await ctx.reply(container, true);
 		}

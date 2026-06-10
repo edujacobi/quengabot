@@ -45,7 +45,20 @@ export default {
 					return;
 				}
 
-				const container = new SimpleContainerBuilder(`${EmoteString.Search} **Processing your request...**`);
+				const funMessages = [
+					"I think I have that in my CD collection",
+					"One moment while I dust off my turntable...",
+					"Let me check my mixtapes...",
+					"Hold on, I'm checking my vinyl collection...",
+					"I'm flipping through my cassettes...",
+					"My neighbor must have it on vinyl...",
+					"Let me check my MP3 player...",
+					"I'm checking my iPod...",
+					"Maybe it's in my Walkman..."
+				];
+				const randomMessage = funMessages[Math.floor(Math.random() * funMessages.length)];
+
+				const container = new SimpleContainerBuilder(`${EmoteString.Search} **${randomMessage}**`);
 				await replyWithContainer(interaction, container);
 
 				try {
