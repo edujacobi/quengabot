@@ -21,6 +21,7 @@
     "@distube/direct-link": "^1.0.1",
     "@distube/soundcloud": "^2.0.4",
     "@distube/spotify": "^2.0.2",
+    "@distube/youtube": "^1.0.4",
     "@distube/yt-dlp": "^2.0.1",
     "discord.js": "^14.17.2",
     "distube": "^5.2.3",

@@ -32,8 +32,13 @@ async function handleNext(ctx: CommandContext) {
 	}
 
 	if (queue.songs.length <= 1) {
+		const isAutoplayEnabled = queue.autoplay;
 		await queue.stop();
 		const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the track and ended the queue.**`);
+
+		if (isAutoplayEnabled) {
+			container.addTexts([`-# Autoplay was disabled.`]);
+		}
 		await ctx.reply(container);
 	}
 	else {

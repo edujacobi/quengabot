@@ -2,7 +2,8 @@ import { DeezerPlugin } from "@distube/deezer";
 import { DirectLinkPlugin } from "@distube/direct-link";
 import { SoundCloudPlugin } from "@distube/soundcloud";
 import { SpotifyPlugin } from "@distube/spotify";
-import { YtDlpPlugin } from "@distube/yt-dlp";
+import { CustomYtDlpPlugin } from "./utils/CustomYtDlpPlugin.js";
+import { YouTubeSearchPlugin } from "./utils/YouTubeSearchPlugin.js";
 import {
 	Client,
 	Collection,
@@ -53,6 +54,8 @@ else {
 writeFileSync("yt-dlp.conf", ytDlpConfLines.join("\n"));
 Log.Info("[Bot] yt-dlp.conf written.");
 
+const customYtDlpPlugin = new CustomYtDlpPlugin({ update: true });
+
 const distube = new DisTube(client, {
 	emitNewSongOnly: true,
 	emitAddSongWhenCreatingQueue: false,
@@ -61,12 +64,13 @@ const distube = new DisTube(client, {
 		path: ffmpegPath,
 	},
 	plugins: [
-		// YtDlpPlugin must be LAST — it acts as a catch-all for any URL the other plugins don't handle
+		// CustomYtDlpPlugin must be LAST — it acts as a catch-all for any URL the other plugins don't handle
 		new SpotifyPlugin(),
+		new YouTubeSearchPlugin(customYtDlpPlugin),
 		new DeezerPlugin(),
 		new SoundCloudPlugin(),
 		new DirectLinkPlugin(),
-		new YtDlpPlugin({ update: true }),
+		customYtDlpPlugin,
 	],
 });
 

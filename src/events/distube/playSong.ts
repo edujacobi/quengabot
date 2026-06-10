@@ -8,6 +8,18 @@ export default {
 	name: Events.PLAY_SONG,
 	once: false,
 	async execute(queue: Queue, song: Song) {
+		// If the song was resolved from an alternative YouTube source, copy the metadata over
+		// so that the Title, Artist, Url, and Thumbnail match the YouTube version.
+		if (!song.stream.playFromSource && song.stream.song) {
+			const altSong = song.stream.song;
+			song.name = altSong.name;
+			song.url = altSong.url;
+			song.thumbnail = altSong.thumbnail;
+			song.uploader = altSong.uploader;
+			song.duration = altSong.duration;
+			song.formattedDuration = altSong.formattedDuration;
+		}
+
 		Log.Info(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
 
 		const container = new SimpleContainerBuilder(
