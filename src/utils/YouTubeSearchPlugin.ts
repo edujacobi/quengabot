@@ -25,8 +25,9 @@ export class YouTubeSearchPlugin extends ExtractorPlugin {
 	// Implement searchSong using yt-search.
 	override async searchSong<T>(query: string, options: ResolveOptions<T>): Promise<Song<T> | null> {
 		try {
-			Log.Info(`[YouTubeSearchPlugin] Searching YouTube for: "${query}"`);
-			const results = await yts(query);
+			const refinedQuery = `${query} topic`;
+			Log.Info(`[YouTubeSearchPlugin] Searching YouTube for: "${refinedQuery}"`);
+			const results = await yts(refinedQuery);
 			if (!results || !results.videos || results.videos.length === 0) {
 				Log.Warning(`[YouTubeSearchPlugin] No search results found for query: "${query}"`);
 				return null;
