@@ -23,7 +23,7 @@ export default {
 		Log.Info(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
 
 		const container = new SimpleContainerBuilder(
-			`${EmoteString.NowPlaying} **Now playing:** **[${song.name}](${song.url})** by ${song.uploader?.name || "Unknown"}\n-# requested by <@${song.user?.id || "Unknown"}>`
+			`${EmoteString.NowPlaying} **Now playing:** **[${song.name}](${song.url})** by ${song.uploader?.name || "Unknown"}\n-# requested by ${song.user?.username || "Unknown"}`
 		);
 
 		await sendMessageInTextChannel(queue.textChannel, container);

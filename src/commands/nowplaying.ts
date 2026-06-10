@@ -47,7 +47,7 @@ async function handleNowplaying(ctx: CommandContext) {
 			)
 		)
 		.addFooter({
-			text: `requested by <@${current.user?.id || "Unknown"}>`,
+			text: `requested by ${current.user?.username || "Unknown"}`,
 		});
 
 	await ctx.reply(container);
