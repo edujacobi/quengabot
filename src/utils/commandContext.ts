@@ -11,7 +11,8 @@ import {
 	checkVoiceStateForMessage,
 	replyWithContainer,
 	replyMessageWithContainer,
-	deferReply
+	deferReply,
+	editMessageWithContainer
 } from "./discordInteractions.js";
 
 export class CommandContext {
@@ -20,6 +21,7 @@ export class CommandContext {
 	public readonly member: GuildMember;
 	public readonly channel: GuildTextBasedChannel;
 	public readonly client: Client;
+	private replyMessage?: Message;
 
 	constructor(public readonly source: ChatInputCommandInteraction | Message) {
 		this.isInteraction = !(source instanceof Message);
@@ -43,7 +45,11 @@ export class CommandContext {
 			return await replyWithContainer(this.source as ChatInputCommandInteraction, container, ephemeral);
 		}
 		else {
-			return await replyMessageWithContainer(this.source as Message, container);
+			if (this.replyMessage) {
+				return await editMessageWithContainer(this.replyMessage, container);
+			}
+			this.replyMessage = await replyMessageWithContainer(this.source as Message, container);
+			return this.replyMessage;
 		}
 	}
 

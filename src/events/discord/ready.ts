@@ -1,9 +1,10 @@
 import { Events, type Client } from "discord.js";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.ClientReady,
 	once: true,
 	execute(client: Client) {
-		console.log(`[Bot] Logged in as ${client.user?.tag}!`);
+		Log.Info(`[Bot] Logged in as ${client.user?.tag}!`);
 	}
 };

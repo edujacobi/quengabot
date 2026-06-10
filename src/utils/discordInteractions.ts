@@ -1,6 +1,7 @@
 import { ButtonInteraction, MessageComponentInteraction, MessageFlags, type CommandInteraction, type ContainerBuilder, type DiscordAPIError, type GuildMember, type GuildTextBasedChannel, type InteractionEditReplyOptions, type InteractionReplyOptions, type Message, type MessageEditOptions, type MessagePayload, type MessageReplyOptions } from "discord.js";
 import { SimpleContainerBuilder, type CustomContainerBuilder } from "./CustomContainerBuilder";
 import { EmoteString } from "./emotes";
+import { Log, logger } from "./log.js";
 
 /**
  * Replies to an interaction, handling deferred or already replied states.
@@ -28,32 +29,32 @@ export async function replyInteraction(interaction: CommandInteraction | ButtonI
 	}
 	catch (err) {
 		const error = err as DiscordAPIError;
-		console.debug(error);
+		logger.debug(error);
 
 		const context = "commandName" in interaction ? `/${interaction.commandName}` : ("customId" in interaction ? `Component: ${interaction.customId}` : "Unknown Context");
 
 		// Handle specific Discord errors gracefully (Console only)
 		if (error.code === 10_008) {
-			console.warn(`[CONSOLE] Interaction reply failed: Deleted Message (Code 10008) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
+			Log.Warning(`[CONSOLE] Interaction reply failed: Deleted Message (Code 10008) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
 			return;
 		}
 
 		if (error.code === 10_062) {
-			console.warn(`[CONSOLE] Interaction reply failed: Unknown Interaction (Code 10062) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
+			Log.Warning(`[CONSOLE] Interaction reply failed: Unknown Interaction (Code 10062) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
 			return;
 		}
 
 		if (error.code === 50_027) {
-			console.warn(`[CONSOLE] Interaction reply failed: Token Expired (Code 50027) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
+			Log.Warning(`[CONSOLE] Interaction reply failed: Token Expired (Code 50027) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}).`);
 			return;
 		}
 
 		if (error.name === "AbortError") {
-			console.warn(`[CONSOLE] Interaction reply timed out (AbortError) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). This is usually a temporary Discord API or network issue.`);
+			Log.Warning(`[CONSOLE] Interaction reply timed out (AbortError) [${context}] for user ${interaction.user.displayName} (Id: ${interaction.user.id}) in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). This is usually a temporary Discord API or network issue.`);
 			return;
 		}
 
-		console.warn(`Something went wrong with replying interaction of user ${interaction.user.displayName} (Id: ${interaction.user.id}) [${context}] in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${error.message}`);
+		Log.Warning(`Something went wrong with replying interaction of user ${interaction.user.displayName} (Id: ${interaction.user.id}) [${context}] in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${error.message}`);
 	}
 }
 
@@ -75,7 +76,7 @@ export async function replyWithContainer(interaction: CommandInteraction | Butto
 }
 
 /**
- * Replies to a message, handling deferred or already replied states.
+ * Replies to a message.
  *
  * @param message - The message to reply to.
  * @param options - The reply options.
@@ -87,11 +88,32 @@ export async function replyMessage(message: Message, options: string | MessagePa
 	}
 	catch (err) {
 		const error = err as DiscordAPIError;
-		console.debug(error);
+		logger.debug(error);
 
 		const context = "commandName" in message ? `q!${message.commandName}` : ("customId" in message ? `Component: ${message.customId}` : `Unknown Context (${message.content})`);
 
-		console.warn(`Something went wrong with replying message of user ${message.author.displayName} (Id: ${message.author.id}) [${context}] in server ${message.guild?.name} (Id: ${message.guild?.id}). Error: ${error.message}`);
+		Log.Warning(`Something went wrong with replying message of user ${message.author.displayName} (Id: ${message.author.id}) [${context}] in server ${message.guild?.name} (Id: ${message.guild?.id}). Error: ${error.message}`);
+	}
+}
+
+/**
+ * Edits a message.
+ *
+ * @param message - The message to edit.
+ * @param options - The edit options.
+ * @returns The edited message or undefined if an error occurs.
+ */
+export async function editMessage(message: Message, options: string | MessagePayload | MessageEditOptions) {
+	try {
+		return await message.edit(options);
+	}
+	catch (err) {
+		const error = err as DiscordAPIError;
+		logger.debug(error);
+
+		const context = "commandName" in message ? `q!${message.commandName}` : ("customId" in message ? `Component: ${message.customId}` : `Unknown Context (${message.content})`);
+
+		Log.Warning(`Something went wrong with editting message [${context}] in server ${message.guild?.name} (Id: ${message.guild?.id}). Error: ${error.message}`);
 	}
 }
 
@@ -112,7 +134,7 @@ export async function sendMessageInTextChannel(textChannel: GuildTextBasedChanne
 		});
 	}
 	catch (err: unknown) {
-		console.error("[DisTube] Failed to send message:", err);
+		Log.Error("[DisTube] Failed to send message:" + (err instanceof Error ? ` ${err.message}` : ""));
 	}
 }
 
@@ -131,10 +153,10 @@ export async function deferReply(interaction: CommandInteraction | ButtonInterac
 	catch (err) {
 		const error = err as Error;
 		if (error.name === "AbortError") {
-			console.warn(`Deferring reply timed out (AbortError) for interaction ${interaction.id} of user ${interaction.user.displayName}.`);
+			Log.Warning(`Deferring reply timed out (AbortError) for interaction ${interaction.id} of user ${interaction.user.displayName}.`);
 			return;
 		}
-		console.warn(`Something went wrong with deferring interaction ${interaction.id} of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
+		Log.Warning(`Something went wrong with deferring interaction ${interaction.id} of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
 	}
 }
 
@@ -153,10 +175,10 @@ export async function deferUpdate(interaction: ButtonInteraction | MessageCompon
 	catch (err) {
 		const error = err as Error;
 		if (error.name === "AbortError") {
-			console.warn(`Deferring update timed out (AbortError) for interaction ${interaction.id} of user ${interaction.user.displayName}.`);
+			Log.Warning(`Deferring update timed out (AbortError) for interaction ${interaction.id} of user ${interaction.user.displayName}.`);
 			return;
 		}
-		// logger.warn(`[CONSOLE] Something went wrong with deferring interaction ${interaction.id} of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
+		// Log.Warning(`[CONSOLE] Something went wrong with deferring interaction ${interaction.id} of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
 	}
 }
 
@@ -207,6 +229,13 @@ export async function replyMessageWithContainer(message: Message, container: Cus
 	return await replyMessage(message, {
 		components: [container],
 		flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+	});
+}
+
+export async function editMessageWithContainer(message: Message, container: CustomContainerBuilder | ContainerBuilder) {
+	return await editMessage(message, {
+		components: [container],
+		flags: [MessageFlags.IsComponentsV2],
 	});
 }
 

@@ -2,12 +2,13 @@ import { Events, type Queue, type Song } from "distube";
 import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { sendMessageInTextChannel } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.PLAY_SONG,
 	once: false,
 	async execute(queue: Queue, song: Song) {
-		console.log(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
+		Log.Info(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
 
 		const container = new SimpleContainerBuilder(
 			`${EmoteString.NowPlaying} **Now playing:** **[${song.name}](${song.url})** by ${song.uploader?.name || "Unknown"}\n-# requested by <@${song.user?.id || "Unknown"}>`
@@ -24,7 +25,7 @@ export default {
 				});
 			}
 			catch (err: unknown) {
-				console.error("[DisTube] Failed to set voice channel status:", err);
+				Log.Error("[DisTube] Failed to set voice channel status: " + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}

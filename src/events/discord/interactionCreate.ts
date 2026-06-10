@@ -2,6 +2,7 @@ import { Events, type Interaction, type GuildMember, type GuildTextBasedChannel 
 import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { replyWithContainer } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.InteractionCreate,
@@ -16,7 +17,7 @@ export default {
 				await command.execute(interaction);
 			}
 			catch (err: unknown) {
-				console.error(`[Bot] Error executing command ${interaction.commandName}:`, err);
+				Log.Error(`[Bot] Error executing command ${interaction.commandName}: ` + (err instanceof Error ? err.message : ""));
 				const container = new SimpleContainerBuilder(`${EmoteString.Error} An error occurred executing this command: ${(err as Error).message}`);
 
 				await replyWithContainer(interaction, container, true);
@@ -44,7 +45,7 @@ export default {
 					return;
 				}
 
-				const container = new SimpleContainerBuilder(`${EmoteString.Search} Processing your request...`);
+				const container = new SimpleContainerBuilder(`${EmoteString.Search} **Processing your request...**`);
 				await replyWithContainer(interaction, container);
 
 				try {
@@ -55,12 +56,12 @@ export default {
 						textChannel: interaction.channel as GuildTextBasedChannel,
 					});
 
-					const container = new SimpleContainerBuilder(`${EmoteString.Add} Got it! Adding to queue...`);
+					const container = new SimpleContainerBuilder(`${EmoteString.Add} **Got it! Adding to queue...**`);
 					await replyWithContainer(interaction, container);
 				}
 				catch (err: unknown) {
 					const error = err as Error;
-					console.error("[SelectMenu] Error playing selection:", error);
+					Log.Error("[SelectMenu] Error playing selection: " + error.message);
 
 					const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
 					await replyWithContainer(interaction, container, true);

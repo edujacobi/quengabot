@@ -1,10 +1,11 @@
 import { Events, type Queue } from "distube";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.DISCONNECT,
 	once: false,
 	async execute(queue: Queue) {
-		console.log(`[DisTube] Disconnected from voice in guild ${queue.id}`);
+		Log.Success(`[DisTube] Disconnected from voice in guild ${queue.id}`);
 
 		// Clear voice channel status
 		const voiceChannel = queue.voiceChannel;
@@ -15,7 +16,7 @@ export default {
 				});
 			}
 			catch (err: unknown) {
-				console.error("[DisTube] Failed to clear voice channel status:", err);
+				Log.Error("[DisTube] Failed to clear voice channel status: " + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}

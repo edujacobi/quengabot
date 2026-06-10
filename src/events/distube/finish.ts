@@ -2,12 +2,13 @@ import { Events, type Queue } from "distube";
 import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { sendMessageInTextChannel } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.FINISH,
 	once: false,
 	async execute(queue: Queue) {
-		console.log(`[DisTube] Queue finished in guild ${queue.id}`);
+		Log.Info(`[DisTube] Queue finished in guild ${queue.id}`);
 
 		const container = new SimpleContainerBuilder(
 			`${EmoteString.Megaphone} **Queue finished.** Add more songs with \`/play\`!`
@@ -24,7 +25,7 @@ export default {
 				});
 			}
 			catch (err: unknown) {
-				console.error("[DisTube] Failed to clear voice channel status:", err);
+				Log.Error("[DisTube] Failed to clear voice channel status: " + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}

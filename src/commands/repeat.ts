@@ -7,6 +7,7 @@ import { CustomContainerBuilder, SimpleContainerBuilder } from "../utils/CustomC
 import { EmoteId, EmoteString } from "../utils/emotes.js";
 import { RepeatMode } from "distube";
 import { deferUpdate } from "../utils/discordInteractions.js";
+import { Log } from "../utils/log.js";
 
 export const repeatCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -94,6 +95,7 @@ async function handleRepeat(ctx: CommandContext) {
 		else if (btn.customId === "repeat_queue") targetMode = RepeatMode.QUEUE;
 
 		queue.setRepeatMode(targetMode);
+		Log.Info(`[RepeatCommand] Repeat mode changed to ${RepeatMode[targetMode]} for guild ${ctx.guildId}`);
 
 		const updatedContainer = getRepeatContainer(targetMode);
 		await ctx.reply(updatedContainer);

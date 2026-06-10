@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { type Command } from "./types.js";
+import { Log } from "./utils/log.js";
 
 const commands: unknown[] = [];
 const commandsPath = path.join(__dirname, "commands");
@@ -28,14 +29,14 @@ async function loadCommands(dir: string) {
 
 				if (command && "data" in command && "execute" in command) {
 					commands.push(command.data.toJSON());
-					console.log(`[Deploy] Command ${file} loaded successfully.`);
+					Log.Info(`[Deploy] Command ${file} loaded successfully.`);
 				}
 				else {
-					console.warn(`[Deploy] The command at ${filePath} is missing a required "data" or "execute" property.`);
+					Log.Warning(`[Deploy] The command at ${filePath} is missing a required "data" or "execute" property.`);
 				}
 			}
 			catch (err) {
-				console.error(`[Deploy] Error loading command ${file}:`, err);
+				Log.Error(`[Deploy] Error loading command ${file}: ` + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}
@@ -47,41 +48,41 @@ async function deploy() {
 	const guildId = process.env.DISCORD_GUILD_ID;
 
 	if (!token) {
-		console.error("[Deploy] Error: DISCORD_TOKEN is missing in the .env file.");
+		Log.Error("[Deploy] Error: DISCORD_TOKEN is missing in the .env file.");
 		return;
 	}
 	if (!clientId) {
-		console.error("[Deploy] Error: DISCORD_CLIENT_ID is missing in the .env file.");
+		Log.Error("[Deploy] Error: DISCORD_CLIENT_ID is missing in the .env file.");
 		return;
 	}
 
-	console.log("[Deploy] Loading commands...");
+	Log.Info("[Deploy] Loading commands...");
 	await loadCommands(commandsPath);
-	console.log(`[Deploy] Loaded ${commands.length} commands for registration.`);
+	Log.Info(`[Deploy] Loaded ${commands.length} commands for registration.`);
 
-	console.log("[Deploy] Starting command registration...");
+	Log.Info("[Deploy] Starting command registration...");
 	const rest = new REST({ version: "10" }).setToken(token);
 
 	try {
 		if (guildId) {
-			console.log(`[Deploy] Registering commands locally to guild ${guildId}...`);
+			Log.Info(`[Deploy] Registering commands locally to guild ${guildId}...`);
 			await rest.put(
 				Routes.applicationGuildCommands(clientId, guildId),
 				{ body: commands }
 			);
-			console.log("[Deploy] Guild-specific commands registered successfully.");
+			Log.Info("[Deploy] Guild-specific commands registered successfully.");
 		}
 		else {
-			console.log("[Deploy] Registering commands globally (this can take up to an hour to propagate)...");
+			Log.Info("[Deploy] Registering commands globally (this can take up to an hour to propagate)...");
 			await rest.put(
 				Routes.applicationCommands(clientId),
 				{ body: commands }
 			);
-			console.log("[Deploy] Global commands registered successfully.");
+			Log.Info("[Deploy] Global commands registered successfully.");
 		}
 	}
 	catch (err) {
-		console.error("[Deploy] Error deploying commands:", err);
+		Log.Error("[Deploy] Error deploying commands: " + (err instanceof Error ? err.message : ""));
 	}
 }
 

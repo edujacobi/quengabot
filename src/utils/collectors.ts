@@ -13,6 +13,7 @@ import {
 } from "discord.js";
 import type { CustomContainerBuilder } from "./CustomContainerBuilder.js";
 import { replyWithContainer } from "./discordInteractions.js";
+import { Log } from "./log.js";
 
 /**
  * Creates a button interaction collector for a message.
@@ -94,6 +95,6 @@ export async function disableButtons(interaction: CommandInteraction | ButtonInt
 		await replyWithContainer(interaction, container);
 	}
 	catch (err) {
-		console.warn(`Something went wrong with disabling buttons from container of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
+		Log.Warning(`Something went wrong with disabling buttons from container of user ${interaction.user.displayName} in server ${interaction.guild?.name} (Id: ${interaction.guild?.id}). Error: ${err}`);
 	}
 }

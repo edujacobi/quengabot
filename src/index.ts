@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { type Command } from "./types.js";
+import { Log } from "./utils/log.js";
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ const client = new Client({
 
 // ── DisTube ────────────────────────────────────────────────────────────────────
 const ffmpegPath = ffmpegStatic ?? "ffmpeg";
-console.log(`[Bot] Using ffmpeg at: ${ffmpegPath}`);
+Log.Info(`[Bot] Using ffmpeg at: ${ffmpegPath}`);
 
 // Write a yt-dlp.conf to the working directory so yt-dlp picks it up automatically.
 // This lets us inject cookies and suppress the deprecated --no-call-home warning
@@ -44,13 +45,13 @@ const ytDlpConfLines: string[] = [
 
 if (process.env.YTDLP_COOKIES_FILE) {
 	ytDlpConfLines.push(`--cookies ${process.env.YTDLP_COOKIES_FILE}`);
-	console.log(`[Bot] yt-dlp: using cookies file: ${process.env.YTDLP_COOKIES_FILE}`);
+	Log.Info(`[Bot] yt-dlp: using cookies file: ${process.env.YTDLP_COOKIES_FILE}`);
 }
 else {
-	console.warn("[Bot] No YouTube cookies configured. Set YTDLP_COOKIES_BROWSER (e.g. 'chrome') or YTDLP_COOKIES_FILE in .env to avoid bot detection.");
+	Log.Warning("[Bot] No YouTube cookies configured. Set YTDLP_COOKIES_BROWSER (e.g. 'chrome') or YTDLP_COOKIES_FILE in .env to avoid bot detection.");
 }
 writeFileSync("yt-dlp.conf", ytDlpConfLines.join("\n"));
-console.log("[Bot] yt-dlp.conf written.");
+Log.Info("[Bot] yt-dlp.conf written.");
 
 const distube = new DisTube(client, {
 	emitNewSongOnly: true,
@@ -100,14 +101,14 @@ async function loadCommands(dir: string) {
 
 				if (command && "data" in command && "execute" in command) {
 					client.commands.set(command.data.name, command);
-					console.log(`[Bot] Command ${file} loaded successfully.`);
+					Log.Info(`[Bot] Command ${file} loaded successfully.`);
 				}
 				else {
-					console.warn(`[Bot] The command at ${filePath} is missing a required "data" or "execute" property.`);
+					Log.Warning(`[Bot] The command at ${filePath} is missing a required "data" or "execute" property.`);
 				}
 			}
 			catch (err) {
-				console.error(`[Bot] Error loading command ${file}:`, err);
+				Log.Error(`[Bot] Error loading command ${file}: ` + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}
@@ -137,11 +138,11 @@ async function loadDiscordEvents(dir: string) {
 					else {
 						client.on(event.name, (...args: unknown[]) => event.execute(...args));
 					}
-					console.log(`[Bot] Discord Event ${file} loaded successfully.`);
+					Log.Info(`[Bot] Discord Event ${file} loaded successfully.`);
 				}
 			}
 			catch (err) {
-				console.error(`[Bot] Error loading Discord event ${file}:`, err);
+				Log.Error(`[Bot] Error loading Discord event ${file}: ` + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}
@@ -171,11 +172,11 @@ async function loadDisTubeEvents(dir: string) {
 					else {
 						client.distube.on(event.name, (...args: unknown[]) => event.execute(...args));
 					}
-					console.log(`[Bot] DisTube Event ${file} loaded successfully.`);
+					Log.Info(`[Bot] DisTube Event ${file} loaded successfully.`);
 				}
 			}
 			catch (err) {
-				console.error(`[Bot] Error loading DisTube event ${file}:`, err);
+				Log.Error(`[Bot] Error loading DisTube event ${file}: ` + (err instanceof Error ? err.message : ""));
 			}
 		}
 	}
@@ -183,36 +184,36 @@ async function loadDisTubeEvents(dir: string) {
 
 // ── Error guards ───────────────────────────────────────────────────────────────
 client.on(Events.Error, (error) => {
-	console.error("Discord Client Error:", error);
+	Log.Error("Discord Client Error: " + error.message);
 });
 
 client.on(Events.ShardError, (error, shardId) => {
-	console.error(`Discord Shard ${shardId} Error (Network issue):`, error);
+	Log.Error(`Discord Shard ${shardId} Error (Network issue): ` + error.message);
 });
 
 client.on(Events.ShardDisconnect, (event, shardId) => {
-	console.warn(`Discord Shard ${shardId} Disconnected (Code: ${event.code}, Reason: ${event.reason || "None"}). Waiting to reconnect...`);
+	Log.Warning(`Discord Shard ${shardId} Disconnected (Code: ${event.code}, Reason: ${event.reason || "None"}). Waiting to reconnect...`);
 });
 
 client.on(Events.ShardReconnecting, (shardId) => {
-	console.info(`Discord Shard ${shardId} Reconnecting to Discord Gateway...`);
+	Log.Info(`Discord Shard ${shardId} Reconnecting to Discord Gateway...`);
 });
 
 client.on(Events.ShardResume, (shardId, replayedEvents) => {
-	console.info(`Discord Shard ${shardId} Successfully Resumed. Replayed ${replayedEvents} events.`);
+	Log.Info(`Discord Shard ${shardId} Successfully Resumed. Replayed ${replayedEvents} events.`);
 });
 
 const handleExit = (signal: string) => {
-	console.info(`[Exit] Received ${signal}. Leaving voice channels...`);
+	Log.Info(`[Exit] Received ${signal}. Leaving voice channels...`);
 
 	for (const guild of client.guilds.cache.values()) {
 		const member = guild.members.me;
 		if (member?.voice.channel) {
-			member.voice.disconnect().catch((err: unknown) => console.error("[Bot] Error disconnecting from voice channel:", err));
+			member.voice.disconnect().catch((err: unknown) => Log.Error("[Bot] Error disconnecting from voice channel:" + (err instanceof Error ? ` ${err.message}` : "")));
 		}
 	}
 
-	console.info(`[Exit] Received ${signal}. Shutting down gracefully...`);
+	Log.Info(`[Exit] Received ${signal}. Shutting down gracefully...`);
 
 	client.destroy();
 	process.exit(0);
@@ -220,19 +221,19 @@ const handleExit = (signal: string) => {
 
 process.on("SIGINT", () => handleExit("SIGINT"));
 process.on("SIGTERM", () => handleExit("SIGTERM"));
-process.on("unhandledRejection", (reason, promise) => console.error("[Process] Unhandled Rejection at:", promise, "reason:", reason));
-process.on("uncaughtException", (error) => console.error("[Process] Uncaught Exception:", error));
+process.on("unhandledRejection", (reason, promise) => Log.Error("[Process] Unhandled Rejection at: " + promise + " reason: " + reason));
+process.on("uncaughtException", (error) => Log.Error("[Process] Uncaught Exception: " + error.message));
 
 // ── Startup ────────────────────────────────────────────────────────────────────
 async function start() {
-	console.log("[Bot] Loading commands...");
+	Log.Info("[Bot] Loading commands...");
 	await loadCommands(commandsPath);
-	console.log(`[Bot] Loaded ${client.commands.size} commands.`);
+	Log.Info(`[Bot] Loaded ${client.commands.size} commands.`);
 
-	console.log("[Bot] Loading Discord events...");
+	Log.Info("[Bot] Loading Discord events...");
 	await loadDiscordEvents(discordEventsPath);
 
-	console.log("[Bot] Loading DisTube events...");
+	Log.Info("[Bot] Loading DisTube events...");
 	await loadDisTubeEvents(distubeEventsPath);
 
 	// ── Login ──────────────────────────────────────────────────────────────────
@@ -242,14 +243,14 @@ async function start() {
 		}
 		catch (err: unknown) {
 			const error = err as Error;
-			console.error("[Bot] Failed to log in. Please check your DISCORD_TOKEN in .env:", error.message);
-		};
+			Log.Error("[Bot] Failed to log in. Please check your DISCORD_TOKEN in .env: " + error.message);
+		}
 	}
 	else {
-		console.error("[Bot] Error: DISCORD_TOKEN is missing in the environmental variables (.env).");
+		Log.Error("[Bot] Error: DISCORD_TOKEN is missing in the environmental variables (.env).");
 	}
 }
 
 start().catch(err => {
-	console.error("[Bot] Critical error during startup:", err);
+	Log.Error("[Bot] Critical error during startup: " + (err instanceof Error ? err.message : ""));
 });

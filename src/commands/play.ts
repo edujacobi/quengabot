@@ -9,6 +9,7 @@ import { type Command } from "../types.js";
 import { CommandContext } from "../utils/commandContext.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
+import { Log } from "../utils/log.js";
 
 export const playCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -63,7 +64,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 		}
 		catch (err: unknown) {
 			const error = err as Error;
-			console.error("[PlayCommand] Error playing URL:", error);
+			Log.Error("[PlayCommand] Error playing URL: " + error.message);
 			const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
 			await ctx.reply(container, true);
 		}
@@ -72,7 +73,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 		// Text search — show 5-result picker using yt-search (fast, no platform SDK needed)
 		await ctx.defer();
 		try {
-			console.log(`[PlayCommand] Searching YouTube for: "${query}"`);
+			Log.Info(`[PlayCommand] Searching YouTube for: "${query}"`);
 			const result = await yts(query);
 			const videos = result.videos.slice(0, 10);
 
@@ -105,7 +106,7 @@ async function handlePlay(ctx: CommandContext, query: string) {
 		}
 		catch (err: unknown) {
 			const error = err as Error;
-			console.error("[PlayCommand] Error searching:", error);
+			Log.Error("[PlayCommand] Error searching: " + error.message);
 			const container = new SimpleContainerBuilder(`${EmoteString.Error} **Error:** ${error.message}`);
 			await ctx.reply(container, true);
 		}

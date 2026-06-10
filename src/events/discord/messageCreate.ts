@@ -2,6 +2,7 @@ import { Events, type Message } from "discord.js";
 import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { replyMessageWithContainer } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
+import { Log } from "../../utils/log.js";
 
 export default {
 	name: Events.MessageCreate,
@@ -34,7 +35,7 @@ export default {
 			}
 		}
 		catch (err: unknown) {
-			console.error(`[Prefix] Error executing command ${commandName}:`, err);
+			Log.Error(`[Prefix] Error executing command ${commandName}: ` + (err instanceof Error ? err.message : ""));
 
 			const container = new SimpleContainerBuilder(`${EmoteString.Error} An error occurred: ${(err as Error).message}`);
 			await replyMessageWithContainer(message, container);
