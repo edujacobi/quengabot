@@ -3,6 +3,7 @@ import { type Command } from "../types.js";
 import { CustomContainerBuilder, SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
 import { CommandContext } from "../utils/commandContext.js";
+import { RepeatMode } from "distube";
 
 /** Format seconds into MM:SS or H:MM:SS */
 function formatDuration(seconds: number): string {
@@ -85,10 +86,16 @@ async function handleQueue(ctx: CommandContext) {
 		}
 	}
 
+	let emote = "";
+
+	if (queue.repeatMode === RepeatMode.DISABLED) emote = EmoteString.Normal;
+	else if (queue.repeatMode === RepeatMode.SONG) emote = EmoteString.RepeatOne;
+	else if (queue.repeatMode === RepeatMode.QUEUE) emote = EmoteString.Repeat;
+
 	container
 		.addLargeSeparator()
 		.addTexts([
-			`-# **Total Tracks:** ${queue.songs.length} | **Total Queue Duration:** ${totalDurationStr}`,
+			`-# **Total Tracks:** \`${queue.songs.length}\` | **Total Queue Duration:** \`${totalDurationStr}\` | **Repeat:** ${emote} ${RepeatMode[queue.repeatMode].toLowerCase()}`,
 		]);
 
 	await ctx.reply(container);

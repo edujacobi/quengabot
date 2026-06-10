@@ -33,6 +33,7 @@ import queueCommand from "./commands/queue.js";
 import removeCommand from "./commands/remove.js";
 import helpCommand from "./commands/help.js";
 import shuffleCommand from "./commands/shuffle.js";
+import repeatCommand from "./commands/repeat.js";
 
 // ── Discord Client ─────────────────────────────────────────────────────────────
 const client = new Client({
@@ -181,6 +182,7 @@ commands.set(nowplayingCommand.data.name, nowplayingCommand);
 commands.set(removeCommand.data.name, removeCommand);
 commands.set(helpCommand.data.name, helpCommand);
 commands.set(shuffleCommand.data.name, shuffleCommand);
+commands.set(repeatCommand.data.name, repeatCommand);
 
 client.commands = commands;
 

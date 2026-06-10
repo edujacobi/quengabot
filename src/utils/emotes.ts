@@ -10,7 +10,12 @@ export const EmoteId = {
 	Queue: "1513977988725870692",
 	Search: "1513978011379040346",
 	Add: "1513977673922252820",
-	Shuffle: "1513978031096598579"
+	Shuffle: "1513978031096598579",
+
+	// Repeat
+	Normal: "1514057047979851826",
+	Repeat: "1514056981437087955",
+	RepeatOne: "1514056930757447740",
 };
 
 export const EmoteString = {
@@ -26,4 +31,9 @@ export const EmoteString = {
 	Search: `<:Search:${EmoteId.Search}>`,
 	Add: `<:Add:${EmoteId.Add}>`,
 	Shuffle: `<:Shuffle:${EmoteId.Shuffle}>`,
+
+	// Repeat
+	Normal: `<:Normal:${EmoteId.Normal}>`,
+	Repeat: `<:Repeat:${EmoteId.Repeat}>`,
+	RepeatOne: `<:RepeatOne:${EmoteId.RepeatOne}>`,
 };

@@ -146,7 +146,7 @@ export async function checkVoiceState(
 	}
 
 	if (botVoiceChannel && botVoiceChannel.id !== member.voice.channel.id) {
-		const container = new SimpleContainerBuilder(`${EmoteString.Warning} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
+		const container = new SimpleContainerBuilder(`${EmoteString.Error} You must be in the same voice channel as the bot (<#${botVoiceChannel.id}>) to run this command.`);
 		await replyWithContainer(interaction, container, true);
 		return false;
 	}
