@@ -9,7 +9,8 @@
     "start": "node build/index.js",
     "deploy": "tsx src/deploy.ts",
     "lint": "npx eslint . --ext .ts",
-    "lint-fix": "eslint . --ext .ts --fix"
+    "lint-fix": "eslint . --ext .ts --fix",
+    "postinstall": "node scripts/patch-ytdlp.js"
   },
   "keywords": [],
   "author": "",
