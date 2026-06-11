@@ -34,10 +34,10 @@ async function handleLeave(ctx: CommandContext) {
 
 	await queue.stop();
 
-	const member = ctx.member.voice;
-	if (member.channel) {
+	const botMember = ctx.source.guild?.members.me;
+	if (botMember?.voice.channel) {
 		try {
-			await member.disconnect();
+			await botMember.voice.disconnect();
 		}
 		catch (err: unknown) {
 			Log.Error("[Bot] Error disconnecting from voice channel:" + (err instanceof Error ? ` ${err.message}` : ""));
