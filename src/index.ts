@@ -4,6 +4,7 @@ import { SoundCloudPlugin } from "@distube/soundcloud";
 import { SpotifyPlugin } from "@distube/spotify";
 import { CustomYtDlpPlugin } from "./utils/CustomYtDlpPlugin.js";
 import { YouTubeSearchPlugin } from "./utils/YouTubeSearchPlugin.js";
+import { setupCustomAutoplay } from "./utils/customAutoplay.js";
 import {
 	Client,
 	Collection,
@@ -75,6 +76,9 @@ const distube = new DisTube(client, {
 });
 
 client.distube = distube;
+
+// Setup the custom autoplay logic
+setupCustomAutoplay(customYtDlpPlugin);
 
 // ── Commands ───────────────────────────────────────────────────────────────────
 client.cooldowns = new Collection<string, Collection<string, number>>();

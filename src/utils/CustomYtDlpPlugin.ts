@@ -28,8 +28,11 @@ function parseNetscapeCookies(filePath: string): Cookie[] {
 			const parts = line.split("\t");
 			if (parts.length < 7) continue;
 
+			const domain = parts[0];
+			if (!domain.toLowerCase().includes("youtube.com")) continue;
+
 			cookies.push({
-				domain: parts[0],
+				domain: domain,
 				path: parts[2],
 				secure: parts[3] === "TRUE",
 				expirationDate: parseInt(parts[4], 10),
@@ -37,7 +40,7 @@ function parseNetscapeCookies(filePath: string): Cookie[] {
 				value: parts[6]
 			});
 		}
-		Log.Info(`[CustomYtDlpPlugin] Successfully parsed ${cookies.length} cookies.`);
+		Log.Info(`[CustomYtDlpPlugin] Successfully parsed ${cookies.length} YouTube cookies.`);
 		return cookies;
 	}
 	catch (err: unknown) {
