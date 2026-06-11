@@ -20,6 +20,9 @@ export default {
 			song.formattedDuration = altSong.formattedDuration;
 		}
 
+		(queue as any).lastSongStart = Date.now();
+		(queue as any).manualSkip = false;
+
 		Log.Info(`[DisTube] Now playing: "${song.name}" by ${song.uploader?.name || "Unknown"} in guild ${queue.id}`);
 
 		const container = new SimpleContainerBuilder(

@@ -34,6 +34,7 @@ async function handleNext(ctx: CommandContext) {
 	if (queue.songs.length <= 1) {
 		const isAutoplayEnabled = queue.autoplay;
 		if (isAutoplayEnabled) {
+			(queue as any).manualSkip = true;
 			await queue.skip();
 			const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the current track. Autoplay is fetching the next song...**`);
 			await ctx.reply(container);
@@ -45,6 +46,7 @@ async function handleNext(ctx: CommandContext) {
 		}
 	}
 	else {
+		(queue as any).manualSkip = true;
 		await queue.skip();
 		const container = new SimpleContainerBuilder(`${EmoteString.Skip} **Skipped the current track.**`);
 		await ctx.reply(container);

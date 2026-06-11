@@ -2,6 +2,8 @@ import { Queue, Song, DisTubeError } from "distube";
 import yts from "yt-search";
 import { Log } from "./log.js";
 import { type CustomYtDlpPlugin } from "./CustomYtDlpPlugin.js";
+import { SimpleContainerBuilder } from "./CustomContainerBuilder.js";
+import { sendMessageInTextChannel } from "./discordInteractions.js";
 
 export function setupCustomAutoplay(customYtDlpPlugin: CustomYtDlpPlugin) {
 	const originalAddRelatedSong = Queue.prototype._addRelatedSong;
@@ -11,6 +13,31 @@ export function setupCustomAutoplay(customYtDlpPlugin: CustomYtDlpPlugin) {
 			const current = song || this.songs[0] || this.previousSongs[this.previousSongs.length - 1];
 			if (!current) {
 				throw new DisTubeError("NO_RELATED");
+			}
+
+			// Safety loop guard: detect if songs are ending instantly
+			const lastStart = (this as any).lastSongStart || 0;
+			const isManualSkip = (this as any).manualSkip || false;
+			const timeSinceLastStart = Date.now() - lastStart;
+
+			if (lastStart > 0 && !isManualSkip && timeSinceLastStart < 4000) {
+				(this as any).consecutiveInstantEnds = ((this as any).consecutiveInstantEnds || 0) + 1;
+				Log.Warning(`[Autoplay] Song ended instantly (${timeSinceLastStart}ms). Consecutive instant ends: ${(this as any).consecutiveInstantEnds}`);
+			} else {
+				(this as any).consecutiveInstantEnds = 0;
+			}
+
+			// Reset manual skip flag for the next song
+			(this as any).manualSkip = false;
+
+			if (((this as any).consecutiveInstantEnds || 0) >= 3) {
+				Log.Error(`[Autoplay] Infinite autoplay loop detected in guild ${this.id}. Stopping queue.`);
+				const container = new SimpleContainerBuilder(
+					`❌ **Playback Error:** Multiple songs ended instantly. Stopping playback to protect server resources.`
+				);
+				await sendMessageInTextChannel(this.textChannel!, container);
+				await this.stop();
+				throw new Error("LOOP_DETECTED");
 			}
 
 			// Clean the artist name from the uploader/channel name
@@ -159,6 +186,9 @@ export function setupCustomAutoplay(customYtDlpPlugin: CustomYtDlpPlugin) {
 			return nextSong;
 		}
 		catch (error) {
+			if (error instanceof Error && error.message === "LOOP_DETECTED") {
+				throw error;
+			}
 			Log.Error("[Autoplay] Custom autoplay failed, falling back to original: " + (error instanceof Error ? error.message : ""));
 			return await originalAddRelatedSong.call(this, song);
 		}
