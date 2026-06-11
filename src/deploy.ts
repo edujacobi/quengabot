@@ -25,7 +25,11 @@ async function loadCommands(dir: string) {
 			try {
 				const moduleUrl = pathToFileURL(filePath).href;
 				const commandModule = await import(moduleUrl);
-				const command: Command = commandModule.default || commandModule;
+				let command = commandModule.default || commandModule;
+
+				if (command && !("data" in command) && command.default && "data" in command.default) {
+					command = command.default;
+				}
 
 				if (command && "data" in command && "execute" in command) {
 					commands.push(command.data.toJSON());

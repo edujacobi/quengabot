@@ -312,4 +312,4 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/rider,jetbrains,node
 *.sqlite
-/dist/
+/build/

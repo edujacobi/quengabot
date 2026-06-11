@@ -105,7 +105,11 @@ async function loadCommands(dir: string) {
 			try {
 				const moduleUrl = pathToFileURL(filePath).href;
 				const commandModule = await import(moduleUrl);
-				const command: Command = commandModule.default || commandModule;
+				let command = commandModule.default || commandModule;
+
+				if (command && !("data" in command) && command.default && "data" in command.default) {
+					command = command.default;
+				}
 
 				if (command && "data" in command && "execute" in command) {
 					client.commands.set(command.data.name, command);
@@ -137,7 +141,11 @@ async function loadDiscordEvents(dir: string) {
 			try {
 				const moduleUrl = pathToFileURL(filePath).href;
 				const eventModule = await import(moduleUrl);
-				const event = eventModule.default || eventModule;
+				let event = eventModule.default || eventModule;
+
+				if (event && !("name" in event) && event.default && "name" in event.default) {
+					event = event.default;
+				}
 
 				if (event && "name" in event && "execute" in event) {
 					if (event.once) {
@@ -171,7 +179,11 @@ async function loadDisTubeEvents(dir: string) {
 			try {
 				const moduleUrl = pathToFileURL(filePath).href;
 				const eventModule = await import(moduleUrl);
-				const event = eventModule.default || eventModule;
+				let event = eventModule.default || eventModule;
+
+				if (event && !("name" in event) && event.default && "name" in event.default) {
+					event = event.default;
+				}
 
 				if (event && "name" in event && "execute" in event) {
 					if (event.once) {

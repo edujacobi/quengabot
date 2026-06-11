@@ -2,11 +2,11 @@
   "name": "quengabot",
   "version": "1.0.0",
   "description": "A lightweight, simple, and fast Discord music bot using Components V2",
-  "main": "dist/index.js",
+  "main": "build/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node build/index.js",
     "deploy": "tsx src/deploy.ts",
     "lint": "npx eslint . --ext .ts",
     "lint-fix": "eslint . --ext .ts --fix"

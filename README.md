@@ -106,5 +106,5 @@ For production deployment, additional setup is recommended for stability and per
    Install PM2 globally and start the bot:
    ```bash
    npm install -g pm2
-   pm2 start dist/index.js --name "quengabot"
+   pm2 start build/index.js --name "quengabot"
    ```
