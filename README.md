@@ -19,6 +19,10 @@ The bot supports both Discord Slash Commands (recommended) and Prefix Commands (
 | `/remove <index>` | `q!remove <index>` | Remove a specific song from the queue by its index. |
 | `/shuffle` | `q!shuffle` / `q!sh` | Shuffle all the songs in the queue. |
 | `/repeat` | `q!repeat` | Configure queue repeat mode: `[Disable]`, `[Song]`, or `[Queue]`. |
+| `/seek <time>` | `q!seek <time>` | Jump to a specific timestamp in the current song (e.g., `1:30` or `90`). |
+| `/autoplay` | `q!autoplay` / `q!ap` | Toggle autoplay to automatically play related songs when the queue ends. |
+| `/lyrics [query]` | `q!lyrics [query]` / `q!ly` / `q!l` | Fetch lyrics for the currently playing song or a specified song. |
+| `/setcookie` | `q!setcookie` | Update YouTube cookies for the bot (Bot Owner only). Supports file upload or raw text. |
 | `/help` | `q!help` | Display list of commands. |
 
 ---
@@ -50,6 +54,8 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
 # Optional cookie file to bypass YouTube rate limits
 YTDLP_COOKIES_FILE=path_to_cookies.cookie
+# Bot Owner ID (for setcookie command)
+OWNER_ID=your_discord_user_id
 ```
 
 ### 4. Deploy Slash Commands
