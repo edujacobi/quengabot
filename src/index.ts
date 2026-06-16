@@ -60,6 +60,7 @@ const customYtDlpPlugin = new CustomYtDlpPlugin({ update: true });
 
 const cookieFile = process.env.YTDLP_COOKIES_FILE || "Jacobi.cookie";
 const cookies = parseNetscapeCookies(cookieFile);
+Log.Info(`[Diagnose] Loaded cookies count: ${cookies.length}. Names: ${cookies.map(c => c.name).join(", ")}`);
 
 const youtubePlugin = new YouTubePlugin({
 	cookies: cookies.length > 0 ? cookies : undefined
