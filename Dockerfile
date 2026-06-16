@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json tsconfig.json ./
+# Copy scripts folder first, as npm ci triggers the postinstall patch script
+COPY scripts/ ./scripts/
+
 RUN npm ci
 
 COPY . .
@@ -29,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 # Copy package metadata
 COPY package*.json ./
 
-# Copy pre-compiled node_modules from builder (avoids compiling native code again without build tools)
+# Copy pre-compiled node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy compiled TypeScript from builder stage
