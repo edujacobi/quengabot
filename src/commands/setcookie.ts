@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, type Attachment, type ChatInputCommandInteraction, type Message } from "discord.js";
 import fs from "node:fs";
+import path from "node:path";
 import { type Command } from "../types.js";
 import { CommandContext } from "../utils/commandContext.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
@@ -62,6 +63,29 @@ export const setcookieCommand: Command = {
 	}
 };
 
+function normalizeNetscapeCookies(content: string): string {
+	const lines = content.split(/\r?\n/);
+	const normalizedLines = lines.map(line => {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) {
+			return line;
+		}
+		const parts = trimmed.split(/\s+/);
+		if (parts.length >= 7) {
+			const domain = parts[0];
+			const isHttpOnly = parts[1];
+			const path = parts[2];
+			const isSecure = parts[3];
+			const expiry = parts[4];
+			const name = parts[5];
+			const value = parts.slice(6).join(" ");
+			return `${domain}\t${isHttpOnly}\t${path}\t${isSecure}\t${expiry}\t${name}\t${value}`;
+		}
+		return line;
+	});
+	return normalizedLines.join("\n");
+}
+
 async function handleUpdate(ctx: CommandContext, attachment: Attachment | null, text: string | null, isEphemeral: boolean) {
 	let cookieContent = "";
 
@@ -87,7 +111,13 @@ async function handleUpdate(ctx: CommandContext, attachment: Attachment | null, 
 		}
 
 		const cookieFile = process.env.YTDLP_COOKIES_FILE || "Jacobi.cookie";
-		fs.writeFileSync(cookieFile, cookieContent, "utf8");
+		const cookieDir = path.dirname(cookieFile);
+		if (!fs.existsSync(cookieDir)) {
+			fs.mkdirSync(cookieDir, { recursive: true });
+		}
+		
+		const normalizedContent = normalizeNetscapeCookies(cookieContent);
+		fs.writeFileSync(cookieFile, normalizedContent, "utf8");
 
 		const userTag = ctx.isInteraction
 			? (ctx.source as ChatInputCommandInteraction).user.tag

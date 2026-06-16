@@ -25,7 +25,10 @@ function parseNetscapeCookies(filePath: string): Cookie[] {
 		const cookies: Cookie[] = [];
 		for (const line of content.split(/\r?\n/)) {
 			if (!line || line.startsWith("#")) continue;
-			const parts = line.split("\t");
+			let parts = line.split("\t");
+			if (parts.length < 7) {
+				parts = line.trim().split(/\s+/);
+			}
 			if (parts.length < 7) continue;
 
 			const domain = parts[0];
