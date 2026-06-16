@@ -1,14 +1,14 @@
 import { ExtractorPlugin, Song, type Playlist, type ResolveOptions, type Awaitable } from "distube";
 import yts from "yt-search";
-import { YouTubePlugin } from "@distube/youtube";
+import { type CustomYtDlpPlugin } from "./CustomYtDlpPlugin.js";
 import { Log } from "./log.js";
 
 export class YouTubeSearchPlugin extends ExtractorPlugin {
-	private youtubePlugin: YouTubePlugin;
+	private customYtDlp: CustomYtDlpPlugin;
 
-	constructor(youtubePlugin: YouTubePlugin) {
+	constructor(customYtDlp: CustomYtDlpPlugin) {
 		super();
-		this.youtubePlugin = youtubePlugin;
+		this.customYtDlp = customYtDlp;
 	}
 
 	// Never validate any URL so this plugin is never used to resolve/play URLs directly.
@@ -39,7 +39,7 @@ export class YouTubeSearchPlugin extends ExtractorPlugin {
 			Log.Info(`[YouTubeSearchPlugin] Selected video: "${video.title}" (${video.timestamp})`);
 
 			return new Song({
-				plugin: this.youtubePlugin, // Associate with YouTubePlugin so it plays using ytdl-core
+				plugin: this.customYtDlp, // Associate with CustomYtDlpPlugin so it plays using yt-dlp
 				source: "youtube",
 				playFromSource: true,
 				id: video.videoId,
@@ -60,7 +60,7 @@ export class YouTubeSearchPlugin extends ExtractorPlugin {
 	}
 
 	override getStreamURL<T>(song: Song<T>): Awaitable<string> {
-		return this.youtubePlugin.getStreamURL(song);
+		return this.customYtDlp.getStreamURL(song);
 	}
 
 	override getRelatedSongs(_song: Song<any>): Awaitable<Song<any>[]> {

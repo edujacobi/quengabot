@@ -2,7 +2,6 @@ import { DeezerPlugin } from "@distube/deezer";
 import { DirectLinkPlugin } from "@distube/direct-link";
 import { SoundCloudPlugin } from "@distube/soundcloud";
 import { SpotifyPlugin } from "@distube/spotify";
-import { YouTubePlugin } from "@distube/youtube";
 import { CustomYtDlpPlugin, parseNetscapeCookies } from "./utils/CustomYtDlpPlugin.js";
 import { YouTubeSearchPlugin } from "./utils/YouTubeSearchPlugin.js";
 import { setupCustomAutoplay } from "./utils/customAutoplay.js";
@@ -56,14 +55,60 @@ else {
 writeFileSync("yt-dlp.conf", ytDlpConfLines.join("\n"));
 Log.Info("[Bot] yt-dlp.conf written.");
 
+import http from "node:http";
+import { spawn } from "node:child_process";
+
 const customYtDlpPlugin = new CustomYtDlpPlugin({ update: true });
 
-const cookieFile = process.env.YTDLP_COOKIES_FILE || "Jacobi.cookie";
-const cookies = parseNetscapeCookies(cookieFile);
-Log.Info(`[Diagnose] Loaded cookies count: ${cookies.length}. Names: ${cookies.map(c => c.name).join(", ")}`);
+// Local Proxy Server to bypass 403 Forbidden Cloud IP stream blocks
+const proxyServer = http.createServer((req, res) => {
+	const url = new URL(req.url || "", `http://${req.headers.host}`);
+	const videoUrl = url.searchParams.get("url");
+	if (!videoUrl) {
+		res.writeHead(400);
+		res.end("Missing url parameter");
+		return;
+	}
 
-const youtubePlugin = new YouTubePlugin({
-	cookies: cookies.length > 0 ? cookies : undefined
+	res.writeHead(200, {
+		"Content-Type": "audio/webm",
+	});
+
+	const cookieFile = process.env.YTDLP_COOKIES_FILE || "Jacobi.cookie";
+	const isWindows = process.platform === "win32";
+	const ytdlpBinary = path.join(process.cwd(), "node_modules", "@distube/yt-dlp", "bin", isWindows ? "yt-dlp.exe" : "yt-dlp");
+
+	const ytdlpArgs = [
+		"-f", "ba",
+		"-o", "-",
+		videoUrl
+	];
+
+	if (fs.existsSync(cookieFile)) {
+		ytdlpArgs.unshift("--cookies", cookieFile);
+	}
+
+	Log.Info(`[Proxy] Streaming: ${videoUrl}`);
+	const ytdlpProcess = spawn(ytdlpBinary, ytdlpArgs);
+
+	ytdlpProcess.stdout.pipe(res);
+
+	ytdlpProcess.stderr.on("data", (chunk) => {
+		const msg = chunk.toString().trim();
+		if (msg.includes("ERROR:")) {
+			Log.Error(`[Proxy] yt-dlp error: ${msg}`);
+		}
+	});
+
+	req.on("close", () => {
+		ytdlpProcess.kill();
+	});
+});
+
+proxyServer.listen(0, "127.0.0.1", () => {
+	const port = (proxyServer.address() as any).port;
+	Log.Info(`[Proxy] Local streaming proxy server listening on port ${port}`);
+	process.env.LOCAL_PROXY_PORT = port.toString();
 });
 
 const distube = new DisTube(client, {
@@ -75,11 +120,10 @@ const distube = new DisTube(client, {
 	},
 	plugins: [
 		new SpotifyPlugin(),
-		new YouTubeSearchPlugin(youtubePlugin),
+		new YouTubeSearchPlugin(customYtDlpPlugin),
 		new DeezerPlugin(),
 		new SoundCloudPlugin(),
 		new DirectLinkPlugin(),
-		youtubePlugin,
 		customYtDlpPlugin,
 	],
 });

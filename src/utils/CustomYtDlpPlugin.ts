@@ -67,6 +67,15 @@ export class CustomYtDlpPlugin extends YtDlpPlugin {
 		});
 	}
 
+	override async getStreamURL(song: Song): Promise<string> {
+		const port = process.env.LOCAL_PROXY_PORT;
+		if (!port || !song.url) {
+			return super.getStreamURL(song);
+		}
+		Log.Info(`[CustomYtDlpPlugin] Routing stream through local proxy for: ${song.url}`);
+		return `http://127.0.0.1:${port}/stream?url=${encodeURIComponent(song.url)}`;
+	}
+
 	// @ts-expect-error: Override return type is wider than never[]
 	override async getRelatedSongs(song?: Song) {
 		try {
