@@ -5,7 +5,6 @@ import { REST, Routes } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { type Command } from "./types.js";
 import { Log } from "./utils/log.js";
 
 const commands: unknown[] = [];
