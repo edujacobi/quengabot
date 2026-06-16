@@ -2,7 +2,8 @@ import { DeezerPlugin } from "@distube/deezer";
 import { DirectLinkPlugin } from "@distube/direct-link";
 import { SoundCloudPlugin } from "@distube/soundcloud";
 import { SpotifyPlugin } from "@distube/spotify";
-import { CustomYtDlpPlugin } from "./utils/CustomYtDlpPlugin.js";
+import { YouTubePlugin } from "@distube/youtube";
+import { CustomYtDlpPlugin, parseNetscapeCookies } from "./utils/CustomYtDlpPlugin.js";
 import { YouTubeSearchPlugin } from "./utils/YouTubeSearchPlugin.js";
 import { setupCustomAutoplay } from "./utils/customAutoplay.js";
 import {
@@ -57,6 +58,13 @@ Log.Info("[Bot] yt-dlp.conf written.");
 
 const customYtDlpPlugin = new CustomYtDlpPlugin({ update: true });
 
+const cookieFile = process.env.YTDLP_COOKIES_FILE || "Jacobi.cookie";
+const cookies = parseNetscapeCookies(cookieFile);
+
+const youtubePlugin = new YouTubePlugin({
+	cookies: cookies.length > 0 ? cookies : undefined
+});
+
 const distube = new DisTube(client, {
 	emitNewSongOnly: true,
 	emitAddSongWhenCreatingQueue: false,
@@ -65,12 +73,12 @@ const distube = new DisTube(client, {
 		path: ffmpegPath,
 	},
 	plugins: [
-		// CustomYtDlpPlugin must be LAST — it acts as a catch-all for any URL the other plugins don't handle
 		new SpotifyPlugin(),
-		new YouTubeSearchPlugin(customYtDlpPlugin),
+		new YouTubeSearchPlugin(youtubePlugin),
 		new DeezerPlugin(),
 		new SoundCloudPlugin(),
 		new DirectLinkPlugin(),
+		youtubePlugin,
 		customYtDlpPlugin,
 	],
 });

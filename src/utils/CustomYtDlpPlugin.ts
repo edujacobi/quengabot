@@ -15,7 +15,7 @@ interface Cookie {
 }
 
 // Helper to parse Netscape cookies file into a JSON cookies array for YouTubePlugin
-function parseNetscapeCookies(filePath: string): Cookie[] {
+export function parseNetscapeCookies(filePath: string): Cookie[] {
 	try {
 		if (!fs.existsSync(filePath)) {
 			Log.Warning(`[CustomYtDlpPlugin] Cookie file not found at ${filePath}. Recommendations might be rate limited.`);
