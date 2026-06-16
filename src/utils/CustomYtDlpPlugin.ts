@@ -29,7 +29,8 @@ function parseNetscapeCookies(filePath: string): Cookie[] {
 			if (parts.length < 7) continue;
 
 			const domain = parts[0];
-			if (!domain.toLowerCase().includes("youtube.com")) continue;
+			const lowerDomain = domain.toLowerCase();
+			if (!lowerDomain.includes("youtube.com") && !lowerDomain.includes("google.com")) continue;
 
 			cookies.push({
 				domain: domain,
