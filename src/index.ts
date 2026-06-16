@@ -250,6 +250,33 @@ async function start() {
 	await loadCommands(commandsPath);
 	Log.Success(`[Bot] Loaded ${client.commands.size} commands.`);
 
+	// ── Diagnostics ─────────────────────────────────────────────────────────────
+	try {
+		const opus = await import("@discordjs/opus");
+		Log.Info("[Diagnose] @discordjs/opus loaded successfully.");
+	}
+	catch (err: unknown) {
+		Log.Error("[Diagnose] Failed to load @discordjs/opus: " + (err instanceof Error ? err.message : ""));
+	}
+
+	try {
+		const davey = await import("@snazzah/davey");
+		Log.Info("[Diagnose] @snazzah/davey loaded successfully.");
+	}
+	catch (err: unknown) {
+		Log.Error("[Diagnose] Failed to load @snazzah/davey: " + (err instanceof Error ? err.message : ""));
+	}
+
+	try {
+		const { execSync } = await import("child_process");
+		const version = execSync(`"${ffmpegPath}" -version`).toString().split("\n")[0];
+		Log.Info("[Diagnose] ffmpeg binary is executable. Version: " + version);
+	}
+	catch (err: unknown) {
+		Log.Error("[Diagnose] ffmpeg execution check failed: " + (err instanceof Error ? err.message : ""));
+	}
+
+
 	Log.Info("[Bot] Loading Discord events...");
 	await loadDiscordEvents(discordEventsPath);
 
