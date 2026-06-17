@@ -6,6 +6,7 @@ export interface Command {
 	execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 	aliases?: string[];
 	executePrefix?: (message: Message, args: string[]) => Promise<void>;
+	adminOnly?: boolean;
 }
 
 declare module "discord.js" {

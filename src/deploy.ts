@@ -1,13 +1,15 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { REST, Routes } from "discord.js";
+import { REST, Routes, type SlashCommandBuilder } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Log } from "./utils/log.js";
 
-const commands: unknown[] = [];
+const commands: SlashCommandBuilder[] = [];
+const adminCommands: SlashCommandBuilder[] = [];
+
 const commandsPath = path.join(__dirname, "commands");
 
 async function loadCommands(dir: string) {
@@ -31,8 +33,16 @@ async function loadCommands(dir: string) {
 				}
 
 				if (command && "data" in command && "execute" in command) {
-					commands.push(command.data.toJSON());
-					Log.Info(`[Deploy] Command ${file} loaded successfully.`);
+					const commandData = command.data as SlashCommandBuilder;
+
+					if (command.adminOnly) {
+						adminCommands.push(commandData);
+						Log.Info(`[Deploy] Admin command ${file} loaded successfully.`);
+					}
+					else {
+						commands.push(commandData);
+						Log.Info(`[Deploy] Command ${file} loaded successfully.`);
+					}
 				}
 				else {
 					Log.Warning(`[Deploy] The command at ${filePath} is missing a required "data" or "execute" property.`);
@@ -67,22 +77,29 @@ async function deploy() {
 	const rest = new REST({ version: "10" }).setToken(token);
 
 	try {
-		if (guildId) {
-			Log.Info(`[Deploy] Registering commands locally to guild ${guildId}...`);
-			await rest.put(
-				Routes.applicationGuildCommands(clientId, guildId),
-				{ body: commands }
-			);
-			Log.Info("[Deploy] Guild-specific commands registered successfully.");
+		if (!guildId) {
+			Log.Error("[Deploy] Error: DISCORD_GUILD_ID is missing in the .env file.");
+			return;
 		}
-		else {
-			Log.Info("[Deploy] Registering commands globally (this can take up to an hour to propagate)...");
-			await rest.put(
-				Routes.applicationCommands(clientId),
-				{ body: commands }
-			);
-			Log.Info("[Deploy] Global commands registered successfully.");
-		}
+
+		Log.Info(`[Deploy] Registering commands locally to guild ${guildId}...`);
+		await rest.put(
+			Routes.applicationGuildCommands(clientId, guildId),
+			{ body: [] }
+		);
+		await rest.put(
+			Routes.applicationGuildCommands(clientId, guildId),
+			{ body: adminCommands }
+		);
+		Log.Info("[Deploy] Guild-specific commands registered successfully.");
+
+		Log.Info("[Deploy] Registering commands globally (this can take up to an hour to propagate)...");
+		await rest.put(
+			Routes.applicationCommands(clientId),
+			{ body: commands }
+		);
+		Log.Info("[Deploy] Global commands registered successfully.");
+
 	}
 	catch (err) {
 		Log.Error("[Deploy] Error deploying commands: " + (err instanceof Error ? err.message : ""));

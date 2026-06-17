@@ -8,6 +8,7 @@ import { EmoteString } from "../utils/emotes.js";
 import { Log } from "../utils/log.js";
 
 export const setcookieCommand: Command = {
+	adminOnly: true,
 	data: new SlashCommandBuilder()
 		.setName("setcookie")
 		.setDescription("Update YouTube cookies for the bot (Owner only)")
@@ -23,13 +24,11 @@ export const setcookieCommand: Command = {
 		),
 
 	async execute(interaction) {
-		const ctx = new CommandContext(interaction);
 		const ownerId = process.env.OWNER_ID || "332228051871989761";
 		if (interaction.user.id !== ownerId) {
-			const container = new SimpleContainerBuilder(`${EmoteString.Error} **You do not have permission to use this command.**`);
-			await ctx.reply(container, true);
 			return;
 		}
+		const ctx = new CommandContext(interaction);
 
 		const attachment = interaction.options.getAttachment("file");
 		const text = interaction.options.getString("text");
@@ -38,13 +37,11 @@ export const setcookieCommand: Command = {
 	},
 
 	async executePrefix(message, args) {
-		const ctx = new CommandContext(message);
 		const ownerId = process.env.OWNER_ID || "332228051871989761";
 		if (message.author.id !== ownerId) {
-			const container = new SimpleContainerBuilder(`${EmoteString.Error} **You do not have permission to use this command.**`);
-			await ctx.reply(container);
 			return;
 		}
+		const ctx = new CommandContext(message);
 
 		// Try to delete the user's message immediately to protect cookie secrets
 		try {
@@ -115,7 +112,7 @@ async function handleUpdate(ctx: CommandContext, attachment: Attachment | null, 
 		if (!fs.existsSync(cookieDir)) {
 			fs.mkdirSync(cookieDir, { recursive: true });
 		}
-		
+
 		const normalizedContent = normalizeNetscapeCookies(cookieContent);
 		fs.writeFileSync(cookieFile, normalizedContent, "utf8");
 
@@ -125,7 +122,7 @@ async function handleUpdate(ctx: CommandContext, attachment: Attachment | null, 
 
 		Log.Info(`[SetCookie] YouTube cookies updated successfully by ${userTag}. Saved to ${cookieFile}`);
 
-		const container = new SimpleContainerBuilder(`✅ **YouTube cookies updated successfully!**`);
+		const container = new SimpleContainerBuilder(`${EmoteString.Megaphone} **YouTube cookies updated successfully!**`);
 		await ctx.reply(container, isEphemeral);
 	}
 	catch (err) {

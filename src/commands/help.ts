@@ -24,7 +24,7 @@ async function handleHelp(ctx: CommandContext) {
 		.addTexts([`### ${EmoteString.Info} **Available Commands**`])
 		.addLargeSeparator();
 
-	const commands = ctx.client.commands;
+	const commands = ctx.client.commands.filter(command => !command.adminOnly);
 
 	commands.forEach((command) => {
 		const name = command.data.name;
