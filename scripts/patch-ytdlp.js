@@ -1,14 +1,14 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const targetFile = path.join(__dirname, '../node_modules/@distube/yt-dlp/dist/index.js');
+const targetFile = path.join(__dirname, "../node_modules/@distube/yt-dlp/dist/index.js");
 
 if (!fs.existsSync(targetFile)) {
-  console.log('[patch-ytdlp] Target file not found, skipping patch.');
-  process.exit(0);
+	console.log("[patch-ytdlp] Target file not found, skipping patch.");
+	process.exit(0);
 }
 
-let content = fs.readFileSync(targetFile, 'utf8');
+let content = fs.readFileSync(targetFile, "utf8");
 
 const targetCode = `    process2.stderr?.on("data", (chunk) => {
       output += chunk;
@@ -34,11 +34,13 @@ const replacementCode = `    let stdErrOutput = "";
     });`;
 
 if (content.includes(targetCode)) {
-  content = content.replace(targetCode, replacementCode);
-  fs.writeFileSync(targetFile, content, 'utf8');
-  console.log('[patch-ytdlp] Successfully patched @distube/yt-dlp to separate stdout and stderr!');
-} else if (content.includes('let stdErrOutput = ""')) {
-  console.log('[patch-ytdlp] File is already patched.');
-} else {
-  console.warn('[patch-ytdlp] Warning: Target code pattern not found in index.js. The package may have been updated or structure changed.');
+	content = content.replace(targetCode, replacementCode);
+	fs.writeFileSync(targetFile, content, "utf8");
+	console.log("[patch-ytdlp] Successfully patched @distube/yt-dlp to separate stdout and stderr!");
+}
+else if (content.includes("let stdErrOutput = \"\"")) {
+	console.log("[patch-ytdlp] File is already patched.");
+}
+else {
+	console.warn("[patch-ytdlp] Warning: Target code pattern not found in index.js. The package may have been updated or structure changed.");
 }

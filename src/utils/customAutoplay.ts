@@ -23,7 +23,8 @@ export function setupCustomAutoplay(customYtDlpPlugin: CustomYtDlpPlugin) {
 			if (lastStart > 0 && !isManualSkip && timeSinceLastStart < 4000) {
 				(this as any).consecutiveInstantEnds = ((this as any).consecutiveInstantEnds || 0) + 1;
 				Log.Warning(`[Autoplay] Song ended instantly (${timeSinceLastStart}ms). Consecutive instant ends: ${(this as any).consecutiveInstantEnds}`);
-			} else {
+			}
+			else {
 				(this as any).consecutiveInstantEnds = 0;
 			}
 
