@@ -32,3 +32,5 @@ async function handlePing(ctx: CommandContext) {
 
 	return ctx.reply(container);
 }
+
+export default pingCommand;
