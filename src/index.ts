@@ -63,8 +63,7 @@ Log.Info(`[Bot] Using ffmpeg at: ${ffmpegPath}`);
 import { writeFileSync } from "fs";
 const ytDlpConfLines: string[] = [
 	"--remote-components ejs:github",
-	"--js-runtimes node",
-	"--extractor-args \"youtube:player_client=android,web\""
+	"--js-runtimes node"
 ];
 
 if (process.env.YTDLP_COOKIES_FILE) {
