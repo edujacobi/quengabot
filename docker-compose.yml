@@ -1,0 +1,15 @@
+services:
+  quengabot:
+    build: .
+    container_name: quengabot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./Jacobi.cookie:/app/Jacobi.cookie
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
