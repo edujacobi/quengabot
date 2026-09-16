@@ -3,6 +3,7 @@ import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { sendMessageInTextChannel } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
 import { Log } from "../../utils/log.js";
+import { startInactivityTimer } from "../../utils/inactivityManager.js";
 
 export default {
 	name: Events.FINISH,
@@ -15,6 +16,9 @@ export default {
 		);
 
 		await sendMessageInTextChannel(queue.textChannel!, container);
+
+		// Start 5-minute inactivity timer
+		startInactivityTimer(queue.distube.client, queue.id, queue.textChannel, "Queue finished");
 
 		// Clear voice channel status
 		const voiceChannel = queue.voiceChannel;

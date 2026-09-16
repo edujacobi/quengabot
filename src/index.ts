@@ -10,6 +10,7 @@ import {
 	Collection,
 	Events,
 	GatewayIntentBits,
+	Options,
 } from "discord.js";
 import { DisTube } from "distube";
 import dotenv from "dotenv";
@@ -24,6 +25,26 @@ dotenv.config();
 
 // ── Discord Client ─────────────────────────────────────────────────────────────
 const client = new Client({
+	makeCache: Options.cacheWithLimits({
+		MessageManager: 25,
+		StageInstanceManager: 0,
+		PresenceManager: 0,
+		ThreadManager: 0,
+		ThreadMemberManager: 0,
+		ReactionManager: 0,
+		GuildScheduledEventManager: 0,
+		AutoModerationRuleManager: 0,
+	}),
+	sweepers: {
+		messages: {
+			interval: 300,
+			lifetime: 900,
+		},
+		threads: {
+			interval: 3600,
+			lifetime: 14400,
+		},
+	},
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildVoiceStates,

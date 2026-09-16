@@ -4,6 +4,7 @@ import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
 import { CommandContext } from "../utils/commandContext.js";
 import { Log } from "../utils/log.js";
+import { cancelInactivityTimer } from "../utils/inactivityManager.js";
 
 export const leaveCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -23,6 +24,9 @@ export const leaveCommand: Command = {
 
 async function handleLeave(ctx: CommandContext) {
 	if (!await ctx.checkVoice(true)) return;
+
+	// Cancel any pending inactivity timer
+	cancelInactivityTimer(ctx.guildId, "Manual leave command");
 
 	const botMember = ctx.source.guild?.members.me;
 	const botVoiceChannel = botMember?.voice.channel;

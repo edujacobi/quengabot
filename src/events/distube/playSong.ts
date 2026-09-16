@@ -3,11 +3,20 @@ import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { sendMessageInTextChannel } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
 import { Log } from "../../utils/log.js";
+import { cancelInactivityTimer } from "../../utils/inactivityManager.js";
 
 export default {
 	name: Events.PLAY_SONG,
 	once: false,
 	async execute(queue: Queue, song: Song) {
+		// Cancel any pending inactivity timer
+		cancelInactivityTimer(queue.id, "New song started");
+
+		// Prune previous songs history if it exceeds 20 items to prevent unbounded memory growth
+		if (queue.previousSongs && queue.previousSongs.length > 20) {
+			queue.previousSongs.splice(0, queue.previousSongs.length - 20);
+		}
+
 		// If the song was resolved from an alternative YouTube source, copy the metadata over
 		// so that the Title, Artist, Url, and Thumbnail match the YouTube version.
 		if (!song.stream.playFromSource && song.stream.song) {
