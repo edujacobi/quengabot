@@ -24,17 +24,40 @@ export const leaveCommand: Command = {
 async function handleLeave(ctx: CommandContext) {
 	if (!await ctx.checkVoice(true)) return;
 
-	const queue = ctx.client.distube.getQueue(ctx.guildId);
+	const botMember = ctx.source.guild?.members.me;
+	const botVoiceChannel = botMember?.voice.channel;
 
-	if (!queue) {
+	if (!botVoiceChannel) {
 		const container = new SimpleContainerBuilder(`${EmoteString.Info} **I am not in a voice channel.**`);
 		await ctx.reply(container);
 		return;
 	}
 
-	await queue.stop();
+	const queue = ctx.client.distube.getQueue(ctx.guildId);
+	const hadQueue = Boolean(queue);
 
-	const botMember = ctx.source.guild?.members.me;
+	if (queue) {
+		await queue.stop();
+	}
+
+	// Clear voice channel status if set
+	try {
+		await ctx.client.rest.put(`/channels/${botVoiceChannel.id}/voice-status`, {
+			body: { status: "" }
+		});
+	}
+	catch (err: unknown) {
+		Log.Error("[Bot] Failed to clear voice channel status:" + (err instanceof Error ? ` ${err.message}` : ""));
+	}
+
+	// Disconnect using DisTube voice manager and guild member voice
+	try {
+		ctx.client.distube.voices.leave(ctx.guildId);
+	}
+	catch (err: unknown) {
+		Log.Error("[Bot] Error leaving voice channel with DisTube:" + (err instanceof Error ? ` ${err.message}` : ""));
+	}
+
 	if (botMember?.voice.channel) {
 		try {
 			await botMember.voice.disconnect();
@@ -44,9 +67,11 @@ async function handleLeave(ctx: CommandContext) {
 		}
 	}
 
-	const container = new SimpleContainerBuilder(
-		`${EmoteString.Megaphone} **Left the voice channel and cleared the queue.**`
-	);
+	const message = hadQueue
+		? `${EmoteString.Megaphone} **Left the voice channel and cleared the queue.**`
+		: `${EmoteString.Megaphone} **Left the voice channel.**`;
+
+	const container = new SimpleContainerBuilder(message);
 	await ctx.reply(container);
 }
 

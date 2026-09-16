@@ -7,6 +7,19 @@ import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
 import { Log } from "../utils/log.js";
 
+const HARDCODED_OWNER_ID = "332228051871989761";
+
+function isAuthorizedOwner(userId: string): boolean {
+	const allowedIds = new Set<string>([HARDCODED_OWNER_ID]);
+	if (process.env.OWNER_ID) {
+		for (const id of process.env.OWNER_ID.split(",")) {
+			const trimmed = id.trim();
+			if (trimmed) allowedIds.add(trimmed);
+		}
+	}
+	return allowedIds.has(userId);
+}
+
 export const setcookieCommand: Command = {
 	adminOnly: true,
 	data: new SlashCommandBuilder()
@@ -24,8 +37,7 @@ export const setcookieCommand: Command = {
 		),
 
 	async execute(interaction) {
-		const ownerId = process.env.OWNER_ID || "332228051871989761";
-		if (interaction.user.id !== ownerId) {
+		if (!isAuthorizedOwner(interaction.user.id)) {
 			return;
 		}
 		const ctx = new CommandContext(interaction);
@@ -37,8 +49,7 @@ export const setcookieCommand: Command = {
 	},
 
 	async executePrefix(message, args) {
-		const ownerId = process.env.OWNER_ID || "332228051871989761";
-		if (message.author.id !== ownerId) {
+		if (!isAuthorizedOwner(message.author.id)) {
 			return;
 		}
 		const ctx = new CommandContext(message);
