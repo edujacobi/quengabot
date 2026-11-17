@@ -4,12 +4,13 @@ import {
 	StringSelectMenuBuilder,
 	StringSelectMenuOptionBuilder
 } from "discord.js";
-import yts from "yt-search";
+import { performance } from "node:perf_hooks";
 import { type Command } from "../types.js";
 import { CommandContext } from "../utils/commandContext.js";
 import { SimpleContainerBuilder } from "../utils/CustomContainerBuilder.js";
 import { EmoteString } from "../utils/emotes.js";
 import { Log } from "../utils/log.js";
+import { searchYouTubeVideos } from "../utils/youtubeSearchCache.js";
 
 export const playCommand: Command = {
 	data: new SlashCommandBuilder()
@@ -109,9 +110,20 @@ async function handlePlay(ctx: CommandContext, query: string) {
 			// playSong / addSong events in index.ts handle the UI feedback
 			let container = new SimpleContainerBuilder(`${EmoteString.Search} **${randomMessage}**`);
 
-			await ctx.reply(container);
-			const result = await yts(query);
-			const videos = result.videos.slice(0, 10);
+			const searchStartedAt = performance.now();
+			const searchResultPromise = searchYouTubeVideos(query).then(
+				videos => {
+					Log.Info(`[PlayCommand] YouTube search finished in ${Math.round(performance.now() - searchStartedAt)} ms.`);
+					return { videos };
+				},
+				(error: unknown) => {
+					Log.Info(`[PlayCommand] YouTube search failed after ${Math.round(performance.now() - searchStartedAt)} ms.`);
+					return { error };
+				}
+			);
+			const [searchResult] = await Promise.all([searchResultPromise, ctx.reply(container)]);
+			if ("error" in searchResult) throw searchResult.error;
+			const videos = searchResult.videos;
 
 			if (videos.length === 0) {
 				const container = new SimpleContainerBuilder(`${EmoteString.Error} No results found for: \`${query}\``);

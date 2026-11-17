@@ -1,9 +1,11 @@
 import { YtDlpPlugin } from "@distube/yt-dlp";
 import { YouTubePlugin } from "@distube/youtube";
-import { Song } from "distube";
+import { Song, type Playlist, type ResolveOptions } from "distube";
 import fs from "node:fs";
+import { performance } from "node:perf_hooks";
 import yts from "yt-search";
 import { Log } from "./log.js";
+import { getCachedYouTubeVideo } from "./youtubeSearchCache.js";
 
 interface Cookie {
 	domain: string;
@@ -65,6 +67,35 @@ export class CustomYtDlpPlugin extends YtDlpPlugin {
 		this.ytPlugin = new YouTubePlugin({
 			cookies: cookies.length > 0 ? cookies : undefined
 		});
+	}
+
+	override async resolve<T>(url: string, options: ResolveOptions<T>): Promise<Song<T> | Playlist<T>> {
+		const video = getCachedYouTubeVideo(url);
+		if (video) {
+			Log.Info(`[CustomYtDlpPlugin] Reusing search metadata for: ${video.url}`);
+			return new Song({
+				plugin: this,
+				source: "youtube",
+				playFromSource: true,
+				id: video.videoId,
+				name: video.title,
+				url: video.url,
+				thumbnail: video.thumbnail,
+				duration: video.seconds,
+				uploader: {
+					name: video.author?.name,
+					url: video.author?.url,
+				},
+			}, options);
+		}
+
+		const resolveStartedAt = performance.now();
+		try {
+			return await super.resolve(url, options);
+		}
+		finally {
+			Log.Info(`[CustomYtDlpPlugin] yt-dlp metadata resolution took ${Math.round(performance.now() - resolveStartedAt)} ms.`);
+		}
 	}
 
 	override async getStreamURL(song: Song): Promise<string> {

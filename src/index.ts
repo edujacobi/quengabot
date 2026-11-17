@@ -17,6 +17,7 @@ import dotenv from "dotenv";
 import ffmpegStatic from "ffmpeg-static";
 import fs from "node:fs";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { type Command } from "./types.js";
 import { Log } from "./utils/log.js";
@@ -110,8 +111,12 @@ const proxyServer = http.createServer((req, res) => {
 	}
 
 	Log.Info(`[Proxy] Streaming: ${videoUrl}`);
+	const streamStartedAt = performance.now();
 	const ytdlpProcess = spawn(ytdlpBinary, ytdlpArgs);
 
+	ytdlpProcess.stdout.once("data", () => {
+		Log.Info(`[Proxy] First audio data received after ${Math.round(performance.now() - streamStartedAt)} ms.`);
+	});
 	ytdlpProcess.stdout.pipe(res);
 
 	ytdlpProcess.stderr.on("data", (chunk) => {

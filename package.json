@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
+    "test": "npm run build && node --test tests/youtubeSearchCache.test.mjs",
     "start": "node build/index.js",
     "deploy": "tsx src/deploy.ts",
     "lint": "npx eslint . --ext .ts",

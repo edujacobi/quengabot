@@ -1,4 +1,5 @@
 import { Events, type Interaction, type GuildMember, type GuildTextBasedChannel } from "discord.js";
+import { performance } from "node:perf_hooks";
 import { SimpleContainerBuilder } from "../../utils/CustomContainerBuilder.js";
 import { replyWithContainer } from "../../utils/discordInteractions.js";
 import { EmoteString } from "../../utils/emotes.js";
@@ -63,11 +64,13 @@ export default {
 
 				try {
 					const selectedUrl = interaction.values[0];
+					const playStartedAt = performance.now();
 
 					await interaction.client.distube.play(member.voice.channel, selectedUrl, {
 						member,
 						textChannel: interaction.channel as GuildTextBasedChannel,
 					});
+					Log.Info(`[SelectMenu] DisTube.play returned after ${Math.round(performance.now() - playStartedAt)} ms.`);
 
 					const container = new SimpleContainerBuilder(`${EmoteString.Add} **Got it! Adding to queue...**`);
 					await replyWithContainer(interaction, container);
